@@ -1,0 +1,74 @@
+# ==========================================
+# Compilación y Binarios (Archivos generados)
+# ==========================================
+# Ejecutables
+*.exe
+*.out
+*.app
+*.elf
+
+# Objetos y Librerías
+*.o
+*.obj
+*.a
+*.la
+*.lo
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# ==========================================
+# Directorios de Construcción (Build)
+# ==========================================
+[Bb]uild/
+[Dd]ist/
+out/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+
+# ==========================================
+# Archivos de Depuración y Diagnóstico
+# ==========================================
+*.dSYM/
+*.suo
+*.idb
+*.pdb
+*.ilk
+*.gch
+*.pch
+
+# ==========================================
+# Entornos de Desarrollo (IDEs) y Editores
+# ==========================================
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+
+# Archivos temporales de editores comunes
+*.swp
+*~
+.DS_Store
