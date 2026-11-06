@@ -1,6 +1,8 @@
 #include <iostream>
-#include "producto.hpp"
+#include "ProductoPanaderia.hpp"
 #include "receta.hpp"
+#include "LoteProduccion.hpp"
+#include "GestionPerecederos.hpp"
 
 int main()
 {
@@ -13,7 +15,8 @@ int main()
     ProductoPanaderia panDeJamon(
         "PAN-JAM-001",           // SKU
         "Pan de Jamon Tradicional", // Nombre adaptado a la panadería venezolana
-        "Masa Dulce Sobada",     // Tipo de Masa (Muy común en Venezuela)
+        TipoMasaBase::DULCE_SOBADA,
+        //"Masa Dulce Sobada",     // Tipo de Masa (Muy común en Venezuela)
         55.0,                    // % Hidratación
         180,                     // Tiempo Fermentación (min)
         30.0,                    // Temp Fermentación (°C) -> Temperatura ambiente promedio en Venezuela
@@ -89,6 +92,65 @@ int main()
 
     std::cout << "==================================================\n";
     std::cout << " Total de tipos de insumos elementales: " << insumosTotales.size() << "\n";
+    std::cout << "==================================================\n\n";
+
+    // 6. Prueba de Trazabilidad de Lotes (Designar::SLList)
+    std::cout << "==================================================\n";
+    std::cout << "      PRUEBA DE TRAZABILIDAD POR LOTE (SLList)    \n";
+    std::cout << "==================================================\n\n";
+
+    LoteProduccion lote1("LOT-20261106-001", panDeJamon.getSKU(), ordenProduccion, {6, 11, 2026});
+
+    lote1.registrarEvento("Pesaje", "Pesaje exacto de harina, liquidos y relleno", "Juan Rincon", {6, 11, 2026});
+    lote1.registrarEvento("Amasado", "Amasado durante 12 min hasta desarrollar gluten", "Juan Rincon", {6, 11, 2026});
+    lote1.registrarEvento("Armado y Sobado", "Laminado e incorporacion de jamon, tocineta y pasas", "Khristopher Santiago", {6, 11, 2026});
+    lote1.registrarEvento("Fermentacion Final", "Camara a 30C durante 180 min", "Luis Acevedo", {6, 11, 2026});
+    lote1.registrarEvento("Horneado", "Horneado a 180C durante 35 min", "Juan Rincon", {6, 11, 2026});
+    lote1.registrarEvento("Control de Calidad", "Inspeccion de corteza, peso y empaque", "Khristopher Santiago", {6, 11, 2026});
+
+    lote1.mostrarHistorialTrazabilidad();
+
+    // 7. Prueba de Gestión de Perecederos (Designar::DynHeap / Min-Heap)
+    std::cout << "==================================================\n";
+    std::cout << "  PRUEBA DE GESTION FEFO DE PERECEDEROS (Min-Heap)\n";
+    std::cout << "==================================================\n\n";
+
+    GestionPerecederos almacen;
+
+    // Se ingresan insumos con fechas de vencimiento desordenadas
+    ProductoPanaderia levadura("MP-LEV-001", "Levadura Fresca en Pasta", TipoMasaBase::BLANDA_ENRIQUECIDA,
+                               0, 0, 0, 0, 0, 1.0, 20, 5, {12, 11, 2026}, 1.20);
+
+    ProductoPanaderia jamon("MP-JAM-001", "Jamon Ahumado Especial", TipoMasaBase::BLANDA_ENRIQUECIDA,
+                            0, 0, 0, 0, 0, 1.0, 50, 10, {20, 11, 2026}, 8.50);
+
+    ProductoPanaderia leche("MP-LEC-001", "Leche Pasteurizada Completa", TipoMasaBase::BLANDA_ENRIQUECIDA,
+                            0, 0, 0, 0, 0, 1.0, 30, 5, {8, 11, 2026}, 1.80); // Esta vence primero!
+
+    ProductoPanaderia margarina("MP-MAR-001", "Margarina con Sal", TipoMasaBase::BLANDA_ENRIQUECIDA,
+                                0, 0, 0, 0, 0, 1.0, 40, 10, {25, 12, 2026}, 3.00);
+
+    almacen.registrarPerecedero(levadura);
+    almacen.registrarPerecedero(jamon);
+    almacen.registrarPerecedero(leche);
+    almacen.registrarPerecedero(margarina);
+
+    std::cout << "[+] Insumos registrados en el Min-Heap: " << almacen.totalPerecederos() << "\n";
+    std::cout << "[+] Proximo a vencer en el top(): " 
+              << almacen.consultarProximoAVencer().getNombre() << " (Vence: "
+              << almacen.consultarProximoAVencer().getFechaVencimiento().dia << "/"
+              << almacen.consultarProximoAVencer().getFechaVencimiento().mes << "/"
+              << almacen.consultarProximoAVencer().getFechaVencimiento().anio << ")\n\n";
+
+    std::cout << "--> Despachando insumos segun vencimiento (orden FEFO):\n";
+    int ordenDespacho = 1;
+    while (almacen.tienePerecederos())
+    {
+        ProductoPanaderia despachado = almacen.despacharProximoAVencer();
+        fecha f = despachado.getFechaVencimiento();
+        std::cout << "  " << ordenDespacho++ << ". [" << f.dia << "/" << f.mes << "/" << f.anio << "] "
+                  << despachado.getNombre() << " (SKU: " << despachado.getSKU() << ")\n";
+    }
     std::cout << "==================================================\n";
 
     return 0;

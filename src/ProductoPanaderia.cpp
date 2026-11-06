@@ -1,14 +1,14 @@
-#include "producto.hpp"
+#include "ProductoPanaderia.hpp"
 
-ProductoPanaderia::ProductoPanaderia(): porcentajeHidratacion(0.0), tiempoFermentacion(0), temperaturaFermentacion(0.0),
+ProductoPanaderia::ProductoPanaderia(): tipoMasaBase(TipoMasaBase::BLANDA_ENRIQUECIDA), porcentajeHidratacion(0.0), tiempoFermentacion(0), temperaturaFermentacion(0.0),
       tiempoHorneado(0), temperaturaHorneado(0), rendimientoMasa(1.0),
       stockActual(0), stockMinimo(0), fechaVencimiento{0, 0, 0}, costoUnitario(0.0) {}
 
-ProductoPanaderia::ProductoPanaderia(std::string sku, std::string nom, std::string masa,
+ProductoPanaderia::ProductoPanaderia(std::string sku, std::string nom, TipoMasaBase masa,
                                      double hidratacion, int tFerm, double tempFerm,
                                      int tHorn, int tempHorn, double rendimiento,
                                      int stockAct, int stockMin, fecha fVenc, double precio)
-    : codigoSKU(sku), nombre(nom), tipoMasa(masa),
+    : codigoSKU(sku), nombre(nom), tipoMasaBase(masa),
       porcentajeHidratacion(hidratacion), tiempoFermentacion(tFerm),
       temperaturaFermentacion(tempFerm), tiempoHorneado(tHorn),
       temperaturaHorneado(tempHorn), rendimientoMasa(rendimiento),
@@ -56,7 +56,7 @@ void ProductoPanaderia::mostrarInfo() const
 {
     std::cout << "========================================\n"
               << "SKU: " << codigoSKU << " | Nombre: " << nombre << "\n"
-              << "Tipo Masa: " << tipoMasa << " | Hidratacion: " << porcentajeHidratacion << "%\n"
+              << "Tipo Masa: " << getTipoMasaNombre() << " | Hidratacion: " << porcentajeHidratacion << "%\n"
               << "Fermentacion: " << tiempoFermentacion << " min a " << temperaturaFermentacion << "C\n"
               << "Horneado: " << tiempoHorneado << " min a " << temperaturaHorneado << "C\n"
               << "Rendimiento Masa: " << rendimientoMasa << "\n"
