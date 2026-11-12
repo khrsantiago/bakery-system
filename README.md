@@ -2,3 +2,5 @@
 
 **Luis Acevedo**
 **Khristopher Santiago**
+**Juan Rincon**
+

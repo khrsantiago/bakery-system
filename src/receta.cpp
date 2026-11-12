@@ -1,10 +1,10 @@
 #include "receta.hpp"
 
 ElementoReceta::ElementoReceta()
-    : codigoSKU(""), cantidad(0.0), unidadMedida("") {}
+    : codigoSKU(""), cantidad(0.0), unidadMedida(""), factorRendimiento(1.0) {}
 
-ElementoReceta::ElementoReceta(std::string cSKU, double cant, std::string uMed)
-    : codigoSKU(cSKU), cantidad(cant), unidadMedida(uMed) {}
+ElementoReceta::ElementoReceta(std::string cSKU, double cant, std::string uMed, double rendimiento)
+    : codigoSKU(cSKU), cantidad(cant), unidadMedida(uMed), factorRendimiento(rendimiento) {}
 
 void ElementoReceta::escalarCantidad(double factor)
 {
@@ -29,7 +29,7 @@ void ElementoReceta::mostrarInfo() const
 
 Receta::Receta(const ProductoPanaderia& producto):codigoSKU(producto.getSKU()),nombre(producto.getNombre())
 {
-    raiz=new NodoReceta(ElementoReceta(producto.getSKU(),0,"kg"));
+    raiz=new NodoReceta(ElementoReceta(producto.getSKU(),1.0,"kg", producto.getRendimientoMasa()));
 }
 
 void Receta::agregarElemento(NodoReceta* padre,const ElementoReceta& elemento)
@@ -58,17 +58,18 @@ NodoReceta* Receta::buscarElemento(std::string codigoSKU)
     return buscarElemento(raiz,codigoSKU);
 }
 
-void Receta::desglozarReceta(NodoReceta* r,double cantidadRequerida, Designar::DynArray<ElementoReceta>& insumos)
+void Receta::desglozarReceta(NodoReceta* r, double cantidadRequerida, Designar::DynArray<ElementoReceta>& insumos)
 {
-    if(r==nullptr) return;
-    ElementoReceta elementoActual=r->get_key();
-    if(r->is_leaf())
+    if (r == nullptr) return;
+    ElementoReceta elementoActual = r->get_key();
+    // Caso base: Nodo hoja (materia prima elemental)
+    if (r->is_leaf())
     {
-        for(auto& i: insumos)
+        for (auto& i : insumos)
         {
-            if(elementoActual.getCodigoSKU()==i.getCodigoSKU())
+            if (elementoActual.getCodigoSKU() == i.getCodigoSKU())
             {
-                i.setCantidad(i.getCantidad()+cantidadRequerida);
+                i.setCantidad(i.getCantidad() + cantidadRequerida);
                 return;
             }
         }
@@ -76,12 +77,20 @@ void Receta::desglozarReceta(NodoReceta* r,double cantidadRequerida, Designar::D
         insumos.append(elementoActual);
         return;
     }
-    for(NodoReceta::ChildrenIterator it=NodoReceta::ChildrenIterator(*r);it.has_current();it.next())
+    // Caso recursivo: Nodo intermedio o raíz (producto o subproducto)
+    // Se ajusta la cantidad requerida según la merma (factor de rendimiento):
+    // Si rendimiento es 0.90 (90%), se formula para cantidadRequerida / 0.90
+    double rendimiento = elementoActual.getFactorRendimiento();
+    double cantidadAjustada = cantidadRequerida;
+    if (rendimiento > 0.0 && rendimiento < 1.0)
     {
-        ElementoReceta subelemento=it.get_current()->get_key();
-        // TODO: Falta por recalcular la cantidad requerida del padre en funcion de su rendimiento de masa.
-        double canReqSubelemento=cantidadRequerida*subelemento.getCantidad();
-        desglozarReceta(it.get_current(),canReqSubelemento,insumos);
+        cantidadAjustada = cantidadRequerida / rendimiento;
+    }
+    for (NodoReceta::ChildrenIterator it = NodoReceta::ChildrenIterator(*r); it.has_current(); it.next())
+    {
+        ElementoReceta subelemento = it.get_current()->get_key();
+        double canReqSubelemento = cantidadAjustada * subelemento.getCantidad();
+        desglozarReceta(it.get_current(), canReqSubelemento, insumos);
     }
 }
 

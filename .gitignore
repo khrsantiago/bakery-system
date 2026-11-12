@@ -25,6 +25,8 @@ programa
 # Directorios de Construcción (Build)
 # ==========================================
 [Bb]uild/
+[Bb]in/
+bin/
 [Dd]ist/
 out/
 CMakeCache.txt
@@ -73,3 +75,7 @@ cmake-build-*/
 *.swp
 *~
 .DS_Store
+
+# Documentación interna / Instrucciones de Agentes
+AGENTS.md
+
