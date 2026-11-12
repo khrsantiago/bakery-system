@@ -1,9 +1,6 @@
 #include <iostream>
 #include <limits>
-#include "ProductoPanaderia.hpp"
-#include "receta.hpp"
-#include "LoteProduccion.hpp"
-#include "GestionPerecederos.hpp"
+#include "SistemaPanaderia.hpp"
 
 // Función auxiliar para pausar y esperar tecla Enter
 void pausar()
