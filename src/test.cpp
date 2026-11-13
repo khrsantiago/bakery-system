@@ -1,8 +1,5 @@
 #include <iostream>
-#include "ProductoPanaderia.hpp"
-#include "receta.hpp"
-#include "LoteProduccion.hpp"
-#include "GestionPerecederos.hpp"
+#include "SistemaPanaderia.hpp"
 
 int main()
 {
@@ -149,6 +146,76 @@ int main()
         std::cout << "  " << ordenDespacho++ << ". [" << f.dia << "/" << f.mes << "/" << f.anio << "] "
                   << despachado.getNombre() << " (SKU: " << despachado.getSKU() << ")\n";
     }
+    std::cout << "==================================================\n\n";
+
+    // 8. Prueba de Tabla Hash por SKU y Flujo Completo POS -> Cocina (Semana 12)
+    std::cout << "==================================================\n";
+    std::cout << "  PRUEBA DE TABLA HASH SKU Y FLUJO POS (Semana 12)\n";
+    std::cout << "==================================================\n\n";
+
+    SistemaPanaderia sistema;
+
+    ProductoPanaderia panCanilla(
+        "PAN-CAN-001",
+        "Pan Canilla Venezolano",
+        TipoMasaBase::CRUJIENTE_RUSTICA,
+        62.0, 90, 28.0, 22, 210, 0.88,
+        120, 30, {14, 11, 2026}, 1.50
+    );
+
+    Receta recetaCanilla(panCanilla);
+    NodoReceta* raizCanilla = recetaCanilla.buscarElemento("PAN-CAN-001");
+    if (raizCanilla != nullptr)
+    {
+        recetaCanilla.agregarElemento(raizCanilla, ElementoReceta("SUB-PRE-001", 0.30, "kg"));
+        NodoReceta* nodoPref = recetaCanilla.buscarElemento("SUB-PRE-001");
+        if (nodoPref != nullptr)
+        {
+            recetaCanilla.agregarElemento(nodoPref, ElementoReceta("MP-HAR-001", 0.60, "kg"));
+            recetaCanilla.agregarElemento(nodoPref, ElementoReceta("MP-AGU-001", 0.38, "kg"));
+            recetaCanilla.agregarElemento(nodoPref, ElementoReceta("MP-LEV-001", 0.02, "kg"));
+        }
+        recetaCanilla.agregarElemento(raizCanilla, ElementoReceta("MP-HAR-001", 0.45, "kg"));
+        recetaCanilla.agregarElemento(raizCanilla, ElementoReceta("MP-AGU-001", 0.20, "kg"));
+        recetaCanilla.agregarElemento(raizCanilla, ElementoReceta("MP-SAL-001", 0.02, "kg"));
+        recetaCanilla.agregarElemento(raizCanilla, ElementoReceta("MP-MAN-001", 0.03, "kg"));
+    }
+
+    bool regProd1 = sistema.registrarProducto(&panDeJamon);
+    bool regRec1  = sistema.registrarReceta(&receta);
+    bool regProd2 = sistema.registrarProducto(&panCanilla);
+    bool regRec2  = sistema.registrarReceta(&recetaCanilla);
+
+    std::cout << "[+] Registro en Tabla Hash (esperado true): "
+              << (regProd1 && regRec1 && regProd2 && regRec2 ? "OK" : "FALLO") << "\n";
+
+    bool regDuplicado = sistema.registrarProducto(&panDeJamon);
+    std::cout << "[+] Rechazo de SKU duplicado (esperado false): "
+              << (!regDuplicado ? "OK" : "FALLO") << "\n";
+
+    ProductoPanaderia* encontrado = sistema.buscarProducto("PAN-JAM-001");
+    if (encontrado != nullptr)
+    {
+        std::cout << "[+] Busqueda O(1) exitosa: " << encontrado->getNombre()
+                  << " (SKU: " << encontrado->getSKU() << ")\n";
+    }
+    else
+    {
+        std::cerr << "[ERROR] No se encontro PAN-JAM-001 en la Tabla Hash.\n";
+        return 1;
+    }
+
+    ProductoPanaderia* noEncontrado = sistema.buscarProducto("SKU-NO-EXISTE");
+    std::cout << "[+] Busqueda O(1) de SKU inexistente (esperado nullptr): "
+              << (noEncontrado == nullptr ? "OK" : "FALLO") << "\n";
+
+    std::cout << "\n--> Ejecutando flujo acoplado Hash O(1) -> Explosion DFS O(n) para PAN-CAN-001:\n";
+    sistema.generarReporteCocina("PAN-CAN-001", 10.0);
+
+    bool eliminado = sistema.eliminarProducto("PAN-CAN-001");
+    bool yaNoEsta = (sistema.buscarProducto("PAN-CAN-001") == nullptr);
+    std::cout << "[+] Eliminacion O(1) de PAN-CAN-001: "
+              << (eliminado && yaNoEsta ? "OK" : "FALLO") << "\n";
     std::cout << "==================================================\n";
 
     return 0;

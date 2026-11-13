@@ -10,7 +10,7 @@ CXXFLAGS    := -std=c++17 -Wall -Wextra -O2
 # Las estructuras de DeSiGNAR (DynArray, MTreeNode, SLList, etc.)
 # son plantillas (templates) definidas totalmente en sus cabeceras (.hpp).
 # Por ende, solo se requiere -IDESIGNAR/include y NO compilar DESIGNAR/src.
-INCLUDEPATH := -Iinclude -IDESIGNAR/include
+INCLUDEPATH := -Iinclude -isystem DESIGNAR/include
 
 FLAGS       := -g $(CXXFLAGS)
 

@@ -6,6 +6,12 @@
 #include "LoteProduccion.hpp"
 #include "GestionPerecederos.hpp"
 
+/**
+ * Función de dispersión (FNV-1a 64-bit) optimizada para códigos SKU alfanuméricos.
+ * Se define en el módulo del proyecto para mantener DeSiGNAR en modo header-only.
+ */
+Designar::nat_t hashSKU(const std::string& sku);
+
 class SistemaPanaderia
 {
 private:
@@ -32,6 +38,10 @@ public:
     ProductoPanaderia* buscarProducto(const std::string& sku);
 
     Receta* buscarReceta(const std::string& sku);
+
+    bool eliminarProducto(const std::string& sku);
+
+    bool eliminarReceta(const std::string& sku);
 
     // =========================================================================
     // ORQUESTACIÓN DE PRODUCCIÓN (Conector Hash O(1) -> Árbol DFS O(n))

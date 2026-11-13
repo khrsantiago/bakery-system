@@ -42,6 +42,9 @@ private:
     void desglozarReceta(NodoReceta* r,double cantidadRequerida, Designar::DynArray<ElementoReceta>& insumos);
 public:
     Receta(const ProductoPanaderia& producto);
+
+    std::string getSKU() const { return codigoSKU; }
+    std::string getNombre() const { return nombre; }
     
     void agregarElemento(NodoReceta* padre,const ElementoReceta& elemento);
     NodoReceta* buscarElemento(std::string codigoSKU);
