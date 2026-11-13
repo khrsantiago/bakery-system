@@ -48,6 +48,7 @@ public:
     // Muestra toda la línea de tiempo de auditoría
     void mostrarHistorialTrazabilidad() const;
     size_t getNumeroEventos() const { return historialEventos.size(); }
+    const Designar::SLList<EventoTrazabilidad>& getEventos() const { return historialEventos; }
 };
 
 #endif // LOTE_PRODUCCION_HPP

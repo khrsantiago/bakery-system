@@ -45,6 +45,7 @@ public:
 
     std::string getSKU() const { return codigoSKU; }
     std::string getNombre() const { return nombre; }
+    NodoReceta* getRaiz() const { return raiz; }
     
     void agregarElemento(NodoReceta* padre,const ElementoReceta& elemento);
     NodoReceta* buscarElemento(std::string codigoSKU);
