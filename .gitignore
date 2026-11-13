@@ -81,3 +81,7 @@ cmake-build-*/
 # Documentación interna / Instrucciones de Agentes
 AGENTS.md
 
+# Archivo de configuración de ventanas generado por Dear ImGui en tiempo de ejecución
+imgui.ini
+
+
