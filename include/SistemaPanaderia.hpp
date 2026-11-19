@@ -5,6 +5,7 @@
 #include "receta.hpp"
 #include "LoteProduccion.hpp"
 #include "GestionPerecederos.hpp"
+#include "MovimientoKardex.hpp"
 
 /**
  * Función de dispersión (FNV-1a 64-bit) optimizada para códigos SKU alfanuméricos.

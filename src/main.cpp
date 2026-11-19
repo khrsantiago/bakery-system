@@ -232,7 +232,7 @@ int main()
                 break;
             }
 
-            case 2:
+             case 2:
             {
                 std::cout << "\n--------------------------------------------------\n";
                 std::cout << " 2. ORDEN DE PRODUCCION (Hash O(1) -> DFS O(n))\n";
@@ -261,7 +261,31 @@ int main()
                     }
                 }
 
+                // 1. Genera e imprime el reporte de cocina (DFS sobre el Árbol N-ario)
                 sistema.generarReporteCocina(sku, cantidadDeseada);
+
+                // 2. Obtiene los insumos desglosados y genera la lista de egresos para el Kardex
+                Designar::DynArray<ElementoReceta> insumosDesglosados;
+                if (sistema.procesarPedidoProduccion(sku, cantidadDeseada, insumosDesglosados))
+                {
+                    fecha fechaHoy = {19, 11, 2026};
+                    
+                    // Llamada a TU función adaptadora
+                    Designar::DynArray<MovimientoKardex> movimientosGenerados = 
+                        generarMovimientosEgreso(insumosDesglosados, sku, fechaHoy);
+
+                    std::cout << "==================================================\n";
+                    std::cout << " REGISTROS PREPARADOS PARA EL KARDEX (EGRESOS)\n";
+                    std::cout << "==================================================\n";
+                    for (size_t i = 0; i < movimientosGenerados.size(); ++i)
+                    {
+                        std::cout << "  -> ";
+                        movimientosGenerados[i].mostrarInfo();
+                        std::cout << "\n";
+                    }
+                    std::cout << "==================================================\n";
+                }
+
                 pausar();
                 break;
             }

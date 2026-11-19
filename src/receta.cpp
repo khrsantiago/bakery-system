@@ -103,3 +103,25 @@ Receta::~Receta()
 {
     NodoReceta::destroy_tree(raiz);
 }
+Designar::DynArray<MovimientoKardex> generarMovimientosEgreso(
+    const Designar::DynArray<ElementoReceta>& insumosConsolidados,
+    const std::string& skuProductoFinal,
+    const fecha& fechaHoy)
+{
+    Designar::DynArray<MovimientoKardex> listaEgresos;
+
+    for (size_t i = 0; i < insumosConsolidados.size(); ++i) {
+        ElementoReceta insumo = insumosConsolidados[i];
+
+        MovimientoKardex egreso;
+        egreso.fechaTransaccion = fechaHoy;
+        egreso.codigoSKU        = insumo.getCodigoSKU();
+        egreso.tipo             = TipoMovimiento::EGRESO_PRODUCCION;
+        egreso.cantidad         = insumo.getCantidad();
+        egreso.descripcion      = "Consumo por produccion de orden: " + skuProductoFinal;
+
+        listaEgresos.append(egreso);
+    }
+
+    return listaEgresos;
+}
