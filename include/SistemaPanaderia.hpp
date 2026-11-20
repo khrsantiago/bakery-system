@@ -6,6 +6,7 @@
 #include "LoteProduccion.hpp"
 #include "GestionPerecederos.hpp"
 #include "KardexInventario.hpp"
+#include <ctime> // Para obtener fecha actual
 
 /**
  * Función de dispersión (FNV-1a 64-bit) optimizada para códigos SKU alfanuméricos.
@@ -59,5 +60,7 @@ public:
     void registrarMovimientoInventario(const MovimientoKardex& mov);
     void consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const;
 };
+
+fecha obtenerFechaActual();
 
 #endif // SISTEMA_PANADERIA_HPP

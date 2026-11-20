@@ -267,7 +267,7 @@ int main()
 
                 // Procesar la orden y registrar egresos automáticamente en Kardex
                 Designar::DynArray<ElementoReceta> insumosDesglosados;
-                fecha fechaHoy = {19, 11, 2026};
+                fecha fechaHoy = obtenerFechaActual();
 
                 if (sistema.procesarPedidoProduccion(sku, cantidadDeseada, fechaHoy, insumosDesglosados))
                 {
@@ -396,7 +396,7 @@ int main()
                     std::cout << " Ingrese el responsable: ";
                     std::getline(std::cin, resp);
 
-                    lote1.registrarEvento(etapa, desc, resp, {6, 11, 2026});
+                    lote1.registrarEvento(etapa, desc, resp, obtenerFechaActual());
                     std::cout << "\n[+] Evento agregado a la lista simplemente enlazada.\n\n";
                 }
 

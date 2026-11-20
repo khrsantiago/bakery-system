@@ -116,7 +116,7 @@ void SistemaPanaderia::generarReporteCocina(const std::string& sku, double canti
     std::cout << "=======================================================\n";
 
     // 1. Ejecuta la búsqueda O(1) en la Tabla Hash y la explosión DFS O(n)
-    fecha fechaHoy = {19, 11, 2026};
+    fecha fechaHoy = obtenerFechaActual();
 
     if (!procesarPedidoProduccion(sku, cantidadSolicitadaKg, fechaHoy, insumosConsolidados)) {
         std::cout << "[!] No se pudo generar el reporte. Verifique el SKU ingresado.\n";
@@ -159,4 +159,15 @@ void SistemaPanaderia::registrarMovimientoInventario(const MovimientoKardex& mov
 
 void SistemaPanaderia::consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const {
     kardex.mostrarMovimientosPorRango(fechaInicio, fechaFin);
+}
+
+fecha obtenerFechaActual() {
+    std::time_t t = std::time(nullptr);
+    std::tm* ahora = std::localtime(&t);
+    
+    return {
+        ahora->tm_mday,         // Día del mes (1-31)
+        ahora->tm_mon + 1,      // Mes (0-11) -> sumamos 1 para (1-12)
+        ahora->tm_year + 1900   // Años desde 1900 -> sumamos 1900
+    };
 }
