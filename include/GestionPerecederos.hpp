@@ -1,7 +1,7 @@
 #ifndef GESTION_PERECEDEROS_HPP
 #define GESTION_PERECEDEROS_HPP
 
-#include <iostream>
+#include <cstddef>
 #include <heap.hpp> // DeSiGNAR: DynHeap
 #include "ProductoPanaderia.hpp"
 
@@ -9,10 +9,7 @@
 // El producto con fecha de vencimiento más temprana tiene mayor prioridad
 struct ComparadorVencimiento
 {
-    bool operator()(const ProductoPanaderia& a, const ProductoPanaderia& b) const
-    {
-        return a.getFechaVencimiento() < b.getFechaVencimiento();
-    }
+    bool operator()(const ProductoPanaderia& a, const ProductoPanaderia& b) const;
 };
 
 class GestionPerecederos
@@ -21,35 +18,20 @@ private:
     Designar::DynHeap<ProductoPanaderia, ComparadorVencimiento> heapPerecederos;
 
 public:
-    GestionPerecederos() {}
+    GestionPerecederos();
 
     // Inserta un producto o materia prima al montículo
-    void registrarPerecedero(const ProductoPanaderia& prod)
-    {
-        heapPerecederos.insert(prod);
-    }
+    void registrarPerecedero(const ProductoPanaderia& prod);
 
     // Consulta el próximo a vencer sin extraerlo
-    ProductoPanaderia consultarProximoAVencer() const
-    {
-        return heapPerecederos.top();
-    }
+    ProductoPanaderia consultarProximoAVencer() const;
 
     // Extrae y despacha el producto más próximo a caducar (estrategia FEFO)
-    ProductoPanaderia despacharProximoAVencer()
-    {
-        return heapPerecederos.get();
-    }
+    ProductoPanaderia despacharProximoAVencer();
 
-    bool tienePerecederos() const
-    {
-        return !heapPerecederos.is_empty();
-    }
+    bool tienePerecederos() const;
 
-    size_t totalPerecederos() const
-    {
-        return heapPerecederos.size();
-    }
+    size_t totalPerecederos() const;
 };
 
 #endif // GESTION_PERECEDEROS_HPP
