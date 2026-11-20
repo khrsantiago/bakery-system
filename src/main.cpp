@@ -175,7 +175,7 @@ int main()
     // BUCLE DEL MENÚ INTERACTIVO (CLI - POS & PRODUCCIÓN)
     // =========================================================================
     int opcion = 0;
-    while (opcion != 6)
+    while (opcion != 7)
     {
         std::cout << "\n==================================================\n";
         std::cout << "         BAKERY SYSTEM - MENU PRINCIPAL          \n";
@@ -184,13 +184,14 @@ int main()
         std::cout << "           Juan Rincon                           \n";
         std::cout << "==================================================\n";
         std::cout << " 1. Busqueda Rapida en POS por SKU (Tabla Hash O(1))\n";
-        std::cout << " 2. Orden de Produccion para Cocina (Hash O(1) -> Arbol DFS)\n";
+        std::cout << " 2. Orden de Produccion para Cocina (Hash O(1) -> Arbol DFS -> Kardex AVL)\n";
         std::cout << " 3. Gestion de Catalogo Hash (Registrar / Eliminar O(1))\n";
         std::cout << " 4. Trazabilidad del Lote (Designar::SLList)\n";
         std::cout << " 5. Gestion de Perecederos FEFO (Min-Heap)\n";
-        std::cout << " 6. Salir\n";
+        std::cout << " 6. Consulta de Kardex de Inventario (Rango de Fechas en Arbol AVL)\n"; // NUEVO
+        std::cout << " 7. Salir\n";
         std::cout << "==================================================\n";
-        std::cout << "Seleccione una opcion [1-6]: ";
+        std::cout << "Seleccione una opcion [1-7]: ";
 
         if (!(std::cin >> opcion))
         {
@@ -232,10 +233,10 @@ int main()
                 break;
             }
 
-             case 2:
+            case 2:
             {
                 std::cout << "\n--------------------------------------------------\n";
-                std::cout << " 2. ORDEN DE PRODUCCION (Hash O(1) -> DFS O(n))\n";
+                std::cout << " 2. ORDEN DE PRODUCCION (Hash O(1) -> DFS O(n) -> Kardex AVL)\n";
                 std::cout << "--------------------------------------------------\n";
                 mostrarSkusDisponibles();
 
@@ -261,29 +262,16 @@ int main()
                     }
                 }
 
-                // 1. Genera e imprime el reporte de cocina (DFS sobre el Árbol N-ario)
+                // Generar el reporte visual para la cocina
                 sistema.generarReporteCocina(sku, cantidadDeseada);
 
-                // 2. Obtiene los insumos desglosados y genera la lista de egresos para el Kardex
+                // Procesar la orden y registrar egresos automáticamente en Kardex
                 Designar::DynArray<ElementoReceta> insumosDesglosados;
-                if (sistema.procesarPedidoProduccion(sku, cantidadDeseada, insumosDesglosados))
-                {
-                    fecha fechaHoy = {19, 11, 2026};
-                    
-                    // Llamada a TU función adaptadora
-                    Designar::DynArray<MovimientoKardex> movimientosGenerados = 
-                        generarMovimientosEgreso(insumosDesglosados, sku, fechaHoy);
+                fecha fechaHoy = {19, 11, 2026};
 
-                    std::cout << "==================================================\n";
-                    std::cout << " REGISTROS PREPARADOS PARA EL KARDEX (EGRESOS)\n";
-                    std::cout << "==================================================\n";
-                    for (size_t i = 0; i < movimientosGenerados.size(); ++i)
-                    {
-                        std::cout << "  -> ";
-                        movimientosGenerados[i].mostrarInfo();
-                        std::cout << "\n";
-                    }
-                    std::cout << "==================================================\n";
+                if (sistema.procesarPedidoProduccion(sku, cantidadDeseada, fechaHoy, insumosDesglosados))
+                {
+                    std::cout << "[+] Movimientos de egreso registrados exitosamente en el Kardex AVL.\n";
                 }
 
                 pausar();
@@ -489,6 +477,28 @@ int main()
             }
 
             case 6:
+            {
+                std::cout << "\n--------------------------------------------------\n";
+                std::cout << " 6. CONSULTA DE KARDEX POR RANGO DE FECHAS (AVL Tree)\n";
+                std::cout << "--------------------------------------------------\n";
+
+                fecha inicio, fin;
+                std::cout << " Ingrese Fecha Inicio (Dia Mes Anio, ej. 01 11 2026): ";
+                std::cin >> inicio.dia >> inicio.mes >> inicio.anio;
+
+                std::cout << " Ingrese Fecha Fin (Dia Mes Anio, ej. 30 11 2026): ";
+                std::cin >> fin.dia >> fin.mes >> fin.anio;
+
+                limpiarBuffer();
+
+                // Llama a la consulta in-order acotada O(log n + k)
+                sistema.consultarKardexPorRangoFechas(inicio, fin);
+
+                pausar();
+                break;
+            }
+
+            case 7:
                 std::cout << "\nSaliendo del Bakery System. Hasta luego!\n";
                 break;
 

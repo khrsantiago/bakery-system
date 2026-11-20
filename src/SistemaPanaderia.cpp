@@ -79,13 +79,14 @@ bool SistemaPanaderia::eliminarReceta(const std::string& sku)
     return catalogoRecetas.remove(sku);
 }
 
-bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, double cantidadSolicitadaKg, Designar::DynArray<ElementoReceta>& insumosConsolidados)
+bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, 
+                                              double cantidadSolicitadaKg, 
+                                              const fecha& fechaHoy, 
+                                              Designar::DynArray<ElementoReceta>& insumosConsolidados) 
 {
     // 1. Búsqueda en O(1) sobre la Tabla Hash
     Receta** ptrReceta = catalogoRecetas.search(sku);
-
-    if (ptrReceta == nullptr || *ptrReceta == nullptr)
-    {
+    if (ptrReceta == nullptr || *ptrReceta == nullptr) {
         std::cerr << "[!] Error: No se encontró receta para el SKU: " << sku << "\n";
         return false;
     }
@@ -94,6 +95,14 @@ bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, double c
 
     // 2. Desglose recursivo DFS en O(n) sobre el Árbol General
     recetaElegida->calcularMateriasPrimas(cantidadSolicitadaKg, insumosConsolidados);
+
+    // 3. 🔹 NUEVO: Conversión a Movimientos y Registro en Kardex AVL en O(k log n)
+    if (!insumosConsolidados.is_empty()) {
+        Designar::DynArray<MovimientoKardex> egresos = generarMovimientosEgreso(insumosConsolidados, sku, fechaHoy);
+        for (size_t i = 0; i < egresos.size(); ++i) {
+            kardex.registrarMovimiento(egresos[i]);
+        }
+    }
 
     return true;
 }
@@ -107,7 +116,9 @@ void SistemaPanaderia::generarReporteCocina(const std::string& sku, double canti
     std::cout << "=======================================================\n";
 
     // 1. Ejecuta la búsqueda O(1) en la Tabla Hash y la explosión DFS O(n)
-    if (!procesarPedidoProduccion(sku, cantidadSolicitadaKg, insumosConsolidados)) {
+    fecha fechaHoy = {19, 11, 2026};
+
+    if (!procesarPedidoProduccion(sku, cantidadSolicitadaKg, fechaHoy, insumosConsolidados)) {
         std::cout << "[!] No se pudo generar el reporte. Verifique el SKU ingresado.\n";
         std::cout << "=======================================================\n\n";
         return;
@@ -140,4 +151,12 @@ void SistemaPanaderia::generarReporteCocina(const std::string& sku, double canti
     std::cout << " Total de Insumos Domiciliados : " << insumosConsolidados.size() << "\n";
     std::cout << " Estado                        : LISTO PARA PREPARACIÓN\n";
     std::cout << "=======================================================\n\n";
+}
+
+void SistemaPanaderia::registrarMovimientoInventario(const MovimientoKardex& mov) {
+    kardex.registrarMovimiento(mov);
+}
+
+void SistemaPanaderia::consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const {
+    kardex.mostrarMovimientosPorRango(fechaInicio, fechaFin);
 }

@@ -5,7 +5,7 @@
 #include "receta.hpp"
 #include "LoteProduccion.hpp"
 #include "GestionPerecederos.hpp"
-#include "MovimientoKardex.hpp"
+#include "KardexInventario.hpp"
 
 /**
  * Función de dispersión (FNV-1a 64-bit) optimizada para códigos SKU alfanuméricos.
@@ -21,6 +21,8 @@ private:
     // Tabla Hash para catálogo de productos por SKU (Búsqueda promedio O(1))
     Designar::HashMap<std::string, ProductoPanaderia*> catalogoProductos;
 
+    KardexInventario kardex;
+    
 public:
     SistemaPanaderia();
     ~SistemaPanaderia();
@@ -48,9 +50,14 @@ public:
     // ORQUESTACIÓN DE PRODUCCIÓN (Conector Hash O(1) -> Árbol DFS O(n))
     // =========================================================================
 
-    bool procesarPedidoProduccion(const std::string& sku, double cantidadSolicitadaKg, Designar::DynArray<ElementoReceta>& insumosConsolidados);
+    bool procesarPedidoProduccion(const std::string& sku, 
+                                  double cantidadSolicitadaKg, 
+                                  const fecha& fechaHoy, 
+                                  Designar::DynArray<ElementoReceta>& insumosConsolidados);
 
     void generarReporteCocina(const std::string& sku, double cantidadSolicitadaKg);
+    void registrarMovimientoInventario(const MovimientoKardex& mov);
+    void consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const;
 };
 
 #endif // SISTEMA_PANADERIA_HPP
