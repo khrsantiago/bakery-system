@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -42,8 +43,10 @@ namespace
         style.TabRounding = 6.0f;
         style.GrabRounding = 4.0f;
         style.WindowPadding = ImVec2(14.0f, 14.0f);
-        style.FramePadding = ImVec2(10.0f, 6.0f);
-        style.ItemSpacing = ImVec2(10.0f, 8.0f);
+        style.FramePadding = ImVec2(10.0f, 7.0f);
+        style.CellPadding = ImVec2(10.0f, 7.0f);
+        style.ItemSpacing = ImVec2(10.0f, 9.0f);
+        style.ScrollbarSize = 16.0f;
 
         ImVec4* colors = style.Colors;
         colors[ImGuiCol_WindowBg]       = ImVec4(0.98f, 0.96f, 0.92f, 1.00f);
@@ -61,6 +64,50 @@ namespace
         colors[ImGuiCol_TabSelected]    = ImVec4(0.76f, 0.45f, 0.18f, 1.00f);
         colors[ImGuiCol_TableHeaderBg]  = ImVec4(0.91f, 0.84f, 0.74f, 1.00f);
         colors[ImGuiCol_TableRowBgAlt]  = ImVec4(0.97f, 0.94f, 0.89f, 0.60f);
+    }
+
+    /**
+     * Carga una tipografía TrueType legible a 18.5 px (con fallback seguro) para mejorar
+     * la lectura en pantallas pequeñas y de alta densidad.
+     */
+    void configurarTipografiaLegible(ImGuiIO& io)
+    {
+        const float tamFuente = 18.5f;
+        const char* candidatos[] = {
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "C:\\Windows\\Fonts\\segoeui.ttf",
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/Library/Fonts/Arial.ttf"
+        };
+
+        ImFontConfig cfg;
+        cfg.OversampleH = 2;
+        cfg.OversampleV = 2;
+        cfg.PixelSnapH = true;
+
+        for (const char* ruta : candidatos)
+        {
+            std::error_code ec;
+            if (std::filesystem::exists(ruta, ec))
+            {
+                ImFont* fuente = io.Fonts->AddFontFromFileTTF(
+                    ruta, tamFuente, &cfg, io.Fonts->GetGlyphRangesDefault()
+                );
+                if (fuente != nullptr)
+                {
+                    io.FontDefault = fuente;
+                    return;
+                }
+            }
+        }
+
+        ImFontConfig cfgDef;
+        cfgDef.SizePixels = 17.0f;
+        io.Fonts->AddFontDefault(&cfgDef);
     }
 
     /**
@@ -107,7 +154,8 @@ namespace
             paginaActual = 0;
         }
 
-        float anchoIzq = (ImGui::GetContentRegionAvail().x - 16.0f) * 0.52f;
+        const float em = ImGui::GetFontSize();
+        float anchoIzq = (ImGui::GetContentRegionAvail().x - 14.0f) * 0.54f;
 
         // =====================================================================
         // PANEL IZQUIERDO: CATÁLOGO PAGINADO Y SELECCIÓN POR NÚMERO / SKU
@@ -118,7 +166,7 @@ namespace
         ImGui::Spacing();
 
         // Selección directa por número
-        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SetNextItemWidth(7.2f * em);
         ImGui::InputInt("# Producto", &numeroSeleccion);
         if (numeroSeleccion < 1)
         {
@@ -141,7 +189,7 @@ namespace
         }
 
         // Búsqueda directa por código SKU en O(1)
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(12.5f * em);
         if (ImGui::InputText("SKU", skuBusqueda, skuBusquedaTam, ImGuiInputTextFlags_EnterReturnsTrue))
         {
             busquedaEjecutada = true;
@@ -160,16 +208,19 @@ namespace
         }
         else
         {
+            float altoTabla = -ImGui::GetFrameHeightWithSpacing() * 1.6f;
             if (ImGui::BeginTable("TablaProductosPaginada", 6,
                                   ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_SizingStretchProp))
+                                  ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                                  ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                                  ImVec2(0.0f, altoTabla)))
             {
-                ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 32.0f);
-                ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 105.0f);
-                ImGui::TableSetupColumn("Nombre", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Stock", ImGuiTableColumnFlags_WidthFixed, 55.0f);
-                ImGui::TableSetupColumn("Precio", ImGuiTableColumnFlags_WidthFixed, 68.0f);
-                ImGui::TableSetupColumn("Receta", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+                ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 2.4f * em);
+                ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 7.6f * em);
+                ImGui::TableSetupColumn("Nombre", ImGuiTableColumnFlags_WidthFixed, 13.5f * em);
+                ImGui::TableSetupColumn("Stock", ImGuiTableColumnFlags_WidthFixed, 4.2f * em);
+                ImGui::TableSetupColumn("Precio", ImGuiTableColumnFlags_WidthFixed, 5.0f * em);
+                ImGui::TableSetupColumn("Receta", ImGuiTableColumnFlags_WidthFixed, 4.4f * em);
                 ImGui::TableHeadersRow();
 
                 int inicio = paginaActual * POR_PAGINA;
@@ -269,10 +320,12 @@ namespace
         ImGui::Spacing();
 
         if (ImGui::BeginTable("TablaFichaProducto", 2,
-                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit |
+                              ImGuiTableFlags_Resizable))
         {
-            ImGui::TableSetupColumn("Campo", ImGuiTableColumnFlags_WidthFixed, 175.0f);
-            ImGui::TableSetupColumn("Detalle", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Campo", ImGuiTableColumnFlags_WidthFixed, 8.8f * em);
+            ImGui::TableSetupColumn("Detalle", ImGuiTableColumnFlags_WidthFixed, 14.5f * em);
             ImGui::TableHeadersRow();
 
             filaDetalleProducto("Codigo SKU", prod->getSKU());
@@ -332,7 +385,7 @@ namespace
         {
             unidadesVenta = 1;
         }
-        ImGui::SetNextItemWidth(140.0f);
+        ImGui::SetNextItemWidth(8.0f * em);
         ImGui::InputInt("Unidades a vender", &unidadesVenta);
         if (unidadesVenta < 1)
         {
@@ -343,7 +396,8 @@ namespace
         ImGui::Text("Total a cobrar: $ %.2f", totalCobro);
 
         ImGui::BeginDisabled(prod->getStockActual() <= 0);
-        if (ImGui::Button("Confirmar Venta POS (Descontar Stock + Kardex)"))
+        if (ImGui::Button("Confirmar Venta POS (Descontar Stock + Kardex)",
+                          ImVec2(-1.0f, ImGui::GetFrameHeight() * 1.25f)))
         {
             if (sistema.registrarVentaPOS(prod->getSKU(), unidadesVenta))
             {
@@ -444,15 +498,18 @@ namespace
                            "Catalogo Hash (Validacion Temprana de SKU) y Constructor de Recetas");
         ImGui::Spacing();
 
-        float anchoIzq = (ImGui::GetContentRegionAvail().x - 16.0f) * 0.45f;
+        const float em = ImGui::GetFontSize();
+        float anchoIzq = (ImGui::GetContentRegionAvail().x - 14.0f) * 0.45f;
 
         // =====================================================================
         // PANEL IZQUIERDO: ALTA DE PRODUCTO CON VALIDACIÓN TEMPRANA DE SKU
         // =====================================================================
-        ImGui::BeginChild("PanelAltaProducto", ImVec2(anchoIzq, 0.0f), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("PanelAltaProducto", ImVec2(anchoIzq, 0.0f),
+                          ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::Text("1. Registrar Nuevo Producto");
         ImGui::Separator();
         ImGui::Spacing();
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.52f);
 
         ImGui::InputText("SKU (ej. PAN-GOL-001)", nuevoSku, sizeof(nuevoSku));
         std::string skuStr(nuevoSku);
@@ -465,12 +522,12 @@ namespace
         }
 
         ImGui::BeginDisabled(skuDuplicado);
-        ImGui::InputText("Nombre del Producto", nuevoNombre, sizeof(nuevoNombre));
+        ImGui::InputText("Nombre Producto", nuevoNombre, sizeof(nuevoNombre));
         ImGui::Combo("Tipo de Masa", &idxMasa, tiposMasa, 6);
         ImGui::SliderFloat("% Hidratacion", &hidratacion, 30.0f, 90.0f, "%.1f %%");
         ImGui::InputInt("Tiempo Ferm. (min)", &tiempoFerm);
         ImGui::InputFloat("Temp. Ferm. (C)", &tempFerm, 0.5f, 2.0f, "%.1f");
-        ImGui::InputInt("Tiempo Horneado (min)", &tiempoHorn);
+        ImGui::InputInt("Tiempo Horneado", &tiempoHorn);
         ImGui::InputInt("Temp. Horneado (C)", &tempHorn);
         ImGui::SliderFloat("Rendimiento Masa", &rendimiento, 0.50f, 1.00f, "%.2f");
         ImGui::InputInt("Stock Actual", &stockAct);
@@ -481,7 +538,8 @@ namespace
         ImGui::InputInt("Anio Venc.", &anioVenc);
 
         ImGui::Spacing();
-        if (ImGui::Button("Registrar Producto en Tabla Hash O(1)"))
+        if (ImGui::Button("Registrar Producto en Tabla Hash O(1)",
+                          ImVec2(-1.0f, ImGui::GetFrameHeight() * 1.2f)))
         {
             std::string nomStr(nuevoNombre);
             if (skuStr.empty() || nomStr.empty())
@@ -531,6 +589,7 @@ namespace
             }
         }
         ImGui::EndDisabled();
+        ImGui::PopItemWidth();
 
         ImGui::EndChild();
 
@@ -539,7 +598,8 @@ namespace
         // =====================================================================
         // PANEL DERECHO: CONSTRUCTOR DE RECETAS Y BAJA DE PRODUCTOS
         // =====================================================================
-        ImGui::BeginChild("PanelRecetasYBaja", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("PanelRecetasYBaja", ImVec2(0.0f, 0.0f),
+                          ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
         const Designar::DynArray<ProductoPanaderia*>& productos = sistema.obtenerListaProductos();
 
         ImGui::Text("2. Agregar o Reemplazar Receta a un Producto");
@@ -565,6 +625,7 @@ namespace
                           prodRec->getNombre().c_str(),
                           sistema.existeReceta(prodRec->getSKU()) ? "SI" : "NO");
 
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.65f);
             if (ImGui::BeginCombo("Producto destino", previewRec))
             {
                 for (size_t i = 0; i < productos.size(); ++i)
@@ -588,7 +649,7 @@ namespace
             const char* skusBase[] = {"MP-HAR-001", "MP-AGU-001", "MP-LEV-001", "MP-AZU-001", "MP-SAL-001", "MP-MAR-001", "MP-JAM-001"};
             for (int k = 0; k < 7; ++k)
             {
-                if (k > 0)
+                if (k % 4 != 0)
                 {
                     ImGui::SameLine();
                 }
@@ -599,8 +660,8 @@ namespace
                 }
             }
 
-            ImGui::SetNextItemWidth(170.0f);
-            if (ImGui::InputText("SKU Ingrediente / Subprod.", ingSku, sizeof(ingSku)))
+            ImGui::SetNextItemWidth(10.5f * em);
+            if (ImGui::InputText("SKU Insumo/Subprod.", ingSku, sizeof(ingSku)))
             {
                 std::string s(ingSku);
                 if (sistema.obtenerCatalogoNombresSKU().has(s))
@@ -608,20 +669,20 @@ namespace
                     std::snprintf(ingNombre, sizeof(ingNombre), "%s", sistema.obtenerNombreSKU(s).c_str());
                 }
             }
-            ImGui::SetNextItemWidth(220.0f);
+            ImGui::SetNextItemWidth(15.0f * em);
             ImGui::InputText("Nombre Ingrediente", ingNombre, sizeof(ingNombre));
 
-            ImGui::SetNextItemWidth(110.0f);
-            ImGui::InputFloat("Cantidad / kg", &ingCantidad, 0.05f, 0.1f, "%.3f");
+            ImGui::SetNextItemWidth(7.2f * em);
+            ImGui::InputFloat("Cant./kg", &ingCantidad, 0.05f, 0.1f, "%.3f");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(70.0f);
-            ImGui::InputText("Unidad", ingUnidad, sizeof(ingUnidad));
+            ImGui::SetNextItemWidth(4.2f * em);
+            ImGui::InputText("Unid.", ingUnidad, sizeof(ingUnidad));
             ImGui::SameLine();
             ImGui::Checkbox("Es Subproducto", &ingEsSubproducto);
 
             if (ingEsSubproducto)
             {
-                ImGui::SetNextItemWidth(120.0f);
+                ImGui::SetNextItemWidth(8.5f * em);
                 ImGui::SliderFloat("Rendimiento Subprod.", &ingRendimiento, 0.50f, 1.00f, "%.2f");
             }
             else
@@ -643,6 +704,7 @@ namespace
                 {
                     idxPadreReceta = 0;
                 }
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.65f);
                 if (ImGui::BeginCombo("Nodo Padre", labelsPadres[static_cast<size_t>(idxPadreReceta)].c_str()))
                 {
                     for (size_t pIdx = 0; pIdx < labelsPadres.size(); ++pIdx)
@@ -695,15 +757,16 @@ namespace
             ImGui::Spacing();
             if (ImGui::BeginTable("TablaBorradorReceta", 6,
                                   ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp,
-                                  ImVec2(0.0f, 150.0f)))
+                                  ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                                  ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                                  ImVec2(0.0f, 9.5f * em)))
             {
-                ImGui::TableSetupColumn("Tipo", ImGuiTableColumnFlags_WidthFixed, 65.0f);
-                ImGui::TableSetupColumn("Padre", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-                ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 95.0f);
-                ImGui::TableSetupColumn("Nombre", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Cant.", ImGuiTableColumnFlags_WidthFixed, 65.0f);
-                ImGui::TableSetupColumn("Accion", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+                ImGui::TableSetupColumn("Tipo", ImGuiTableColumnFlags_WidthFixed, 3.8f * em);
+                ImGui::TableSetupColumn("Padre", ImGuiTableColumnFlags_WidthFixed, 6.8f * em);
+                ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 7.2f * em);
+                ImGui::TableSetupColumn("Nombre", ImGuiTableColumnFlags_WidthFixed, 12.5f * em);
+                ImGui::TableSetupColumn("Cant.", ImGuiTableColumnFlags_WidthFixed, 6.0f * em);
+                ImGui::TableSetupColumn("Acc.", ImGuiTableColumnFlags_WidthFixed, 4.0f * em);
                 ImGui::TableHeadersRow();
 
                 int idxQuitar = -1;
@@ -812,7 +875,7 @@ namespace
             std::snprintf(previewDel, sizeof(previewDel), "[%d] %s - %s",
                           idxProductoEliminar + 1, prodDel->getSKU().c_str(), prodDel->getNombre().c_str());
 
-            ImGui::SetNextItemWidth(320.0f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.56f);
             if (ImGui::BeginCombo("Producto a eliminar", previewDel))
             {
                 for (size_t i = 0; i < productos.size(); ++i)
@@ -939,12 +1002,13 @@ namespace
                            "sumar stock y crear su lote de trazabilidad.");
         ImGui::Spacing();
 
+        const float em = ImGui::GetFontSize();
         const Designar::DynArray<ProductoPanaderia*>& productos = sistema.obtenerListaProductos();
         if (!productos.is_empty())
         {
             std::string previewProd = std::string(skuReceta) + " - " + sistema.obtenerNombreSKU(skuReceta);
-            ImGui::SetNextItemWidth(340.0f);
-            if (ImGui::BeginCombo("Seleccionar Producto", previewProd.c_str()))
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.42f);
+            if (ImGui::BeginCombo("Producto", previewProd.c_str()))
             {
                 for (size_t i = 0; i < productos.size(); ++i)
                 {
@@ -964,10 +1028,10 @@ namespace
             ImGui::SameLine();
         }
 
-        ImGui::SetNextItemWidth(160.0f);
+        ImGui::SetNextItemWidth(9.0f * em);
         ImGui::InputText("SKU", skuReceta, sizeof(skuReceta));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(130.0f);
+        ImGui::SetNextItemWidth(7.5f * em);
         ImGui::InputFloat("Lote (kg)", &cantidadKg, 1.0f, 5.0f, "%.2f");
         if (cantidadKg < 0.1f)
         {
@@ -1059,7 +1123,8 @@ namespace
         float anchoIzq = (ImGui::GetContentRegionAvail().x - 16.0f) * 0.46f;
 
         // Panel izquierdo: Árbol N-ario interactivo
-        ImGui::BeginChild("PanelArbolReceta", ImVec2(anchoIzq, 0.0f), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("PanelArbolReceta", ImVec2(anchoIzq, 0.0f),
+                          ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::Text("Estructura del Arbol de Receta (MTreeNode)");
         ImGui::Separator();
         ImGui::Spacing();
@@ -1097,13 +1162,16 @@ namespace
         ImGui::Spacing();
 
         if (ImGui::BeginTable("TablaInsumosCocina", 5,
-                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                              ImVec2(0.0f, -ImGui::GetFrameHeightWithSpacing() * 1.3f)))
         {
-            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 32.0f);
-            ImGui::TableSetupColumn("SKU Insumo", ImGuiTableColumnFlags_WidthFixed, 105.0f);
-            ImGui::TableSetupColumn("Nombre (Hash O(1))", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Cantidad", ImGuiTableColumnFlags_WidthFixed, 95.0f);
-            ImGui::TableSetupColumn("Unidad", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 2.4f * em);
+            ImGui::TableSetupColumn("SKU Insumo", ImGuiTableColumnFlags_WidthFixed, 7.6f * em);
+            ImGui::TableSetupColumn("Nombre (Hash O(1))", ImGuiTableColumnFlags_WidthFixed, 13.5f * em);
+            ImGui::TableSetupColumn("Cantidad", ImGuiTableColumnFlags_WidthFixed, 6.2f * em);
+            ImGui::TableSetupColumn("Unid.", ImGuiTableColumnFlags_WidthFixed, 4.0f * em);
             ImGui::TableHeadersRow();
 
             for (size_t i = 0; i < insumosResultantes.size(); ++i)
@@ -1156,7 +1224,8 @@ namespace
         static int anioPer = 2026;
         static float costoPer = 3.00f;
 
-        float anchoIzq = (ImGui::GetContentRegionAvail().x - 16.0f) * 0.54f;
+        const float em = ImGui::GetFontSize();
+        float anchoIzq = (ImGui::GetContentRegionAvail().x - 14.0f) * 0.54f;
 
         // =====================================================================
         // COLUMNA IZQUIERDA: TRAZABILIDAD DE LOTES (SLList)
@@ -1186,6 +1255,7 @@ namespace
                           lote.getCodigoSKU().c_str(),
                           nomProdLote.c_str());
 
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.72f);
             if (ImGui::BeginCombo("Lote activo", previewLote))
             {
                 for (size_t i = 0; i < lotes.size(); ++i)
@@ -1205,23 +1275,24 @@ namespace
             }
 
             LoteProduccion& loteAct = lotes[static_cast<size_t>(idxLoteSeleccionado)];
-            ImGui::Text("Producto: %s (%s) | Cantidad: %.1f kg | Eventos: %zu",
-                        sistema.obtenerNombreSKU(loteAct.getCodigoSKU()).c_str(),
-                        loteAct.getCodigoSKU().c_str(),
-                        loteAct.getCantidadPlanificada(),
-                        loteAct.getNumeroEventos());
+            ImGui::TextWrapped("Producto: %s (%s) | Cantidad: %.1f kg | Eventos: %zu",
+                               sistema.obtenerNombreSKU(loteAct.getCodigoSKU()).c_str(),
+                               loteAct.getCodigoSKU().c_str(),
+                               loteAct.getCantidadPlanificada(),
+                               loteAct.getNumeroEventos());
             ImGui::Separator();
             ImGui::Spacing();
 
             if (ImGui::BeginTable("TablaTrazabilidad", 4,
                                   ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp,
-                                  ImVec2(0.0f, 220.0f)))
+                                  ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                                  ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                                  ImVec2(0.0f, 11.5f * em)))
             {
-                ImGui::TableSetupColumn("Fecha", ImGuiTableColumnFlags_WidthFixed, 85.0f);
-                ImGui::TableSetupColumn("Etapa", ImGuiTableColumnFlags_WidthFixed, 125.0f);
-                ImGui::TableSetupColumn("Descripcion", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Responsable", ImGuiTableColumnFlags_WidthFixed, 125.0f);
+                ImGui::TableSetupColumn("Fecha", ImGuiTableColumnFlags_WidthFixed, 6.6f * em);
+                ImGui::TableSetupColumn("Etapa", ImGuiTableColumnFlags_WidthFixed, 8.8f * em);
+                ImGui::TableSetupColumn("Descripcion", ImGuiTableColumnFlags_WidthFixed, 21.0f * em);
+                ImGui::TableSetupColumn("Responsable", ImGuiTableColumnFlags_WidthFixed, 10.0f * em);
                 ImGui::TableHeadersRow();
 
                 for (const auto& ev : loteAct.getEventos())
@@ -1242,9 +1313,11 @@ namespace
 
             ImGui::Spacing();
             ImGui::Text("Registrar nuevo evento de auditoria:");
-            ImGui::InputText("Etapa (ej. Enfriamiento)", etapaInput, sizeof(etapaInput));
+            ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.62f);
+            ImGui::InputText("Etapa", etapaInput, sizeof(etapaInput));
             ImGui::InputText("Descripcion", descInput, sizeof(descInput));
             ImGui::InputText("Responsable", respInput, sizeof(respInput));
+            ImGui::PopItemWidth();
 
             if (ImGui::Button("Agregar Evento a SLList"))
             {
@@ -1297,24 +1370,24 @@ namespace
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Ingresar nuevo perecedero:");
-        ImGui::SetNextItemWidth(160.0f);
+        ImGui::SetNextItemWidth(10.0f * em);
         ImGui::InputText("SKU Perecedero", skuPer, sizeof(skuPer));
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(14.0f * em);
         ImGui::InputText("Nombre Perecedero", nomPer, sizeof(nomPer));
-        ImGui::SetNextItemWidth(90.0f);
+        ImGui::SetNextItemWidth(5.8f * em);
         ImGui::InputInt("Cant.", &stockPer);
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(90.0f);
+        ImGui::SetNextItemWidth(5.8f * em);
         ImGui::InputFloat("Costo ($)", &costoPer, 0.5f, 1.0f, "%.2f");
 
-        ImGui::SetNextItemWidth(80.0f);
-        ImGui::InputInt("Dia", &diaPer);
+        ImGui::SetNextItemWidth(3.8f * em);
+        ImGui::InputInt("Dia", &diaPer, 0, 0);
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(80.0f);
-        ImGui::InputInt("Mes", &mesPer);
+        ImGui::SetNextItemWidth(3.8f * em);
+        ImGui::InputInt("Mes", &mesPer, 0, 0);
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(95.0f);
-        ImGui::InputInt("Anio", &anioPer);
+        ImGui::SetNextItemWidth(4.8f * em);
+        ImGui::InputInt("Anio", &anioPer, 0, 0);
 
         if (ImGui::Button("Agregar al Min-Heap"))
         {
@@ -1343,12 +1416,13 @@ namespace
 
         if (ImGui::BeginTable("TablaDespachoFEFO", 3,
                               ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                              ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp,
-                              ImVec2(0.0f, 140.0f)))
+                              ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                              ImVec2(0.0f, 7.5f * em)))
         {
-            ImGui::TableSetupColumn("Orden", ImGuiTableColumnFlags_WidthFixed, 55.0f);
-            ImGui::TableSetupColumn("Vencimiento", ImGuiTableColumnFlags_WidthFixed, 95.0f);
-            ImGui::TableSetupColumn("Insumo", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Orden", ImGuiTableColumnFlags_WidthFixed, 3.8f * em);
+            ImGui::TableSetupColumn("Vencimiento", ImGuiTableColumnFlags_WidthFixed, 6.8f * em);
+            ImGui::TableSetupColumn("Insumo", ImGuiTableColumnFlags_WidthFixed, 15.0f * em);
             ImGui::TableHeadersRow();
 
             for (size_t i = 0; i < historialDespachosFefo.size(); ++i)
@@ -1385,6 +1459,8 @@ namespace
         static char movDesc[160] = "Compra / reposicion de inventario";
         static std::string msgKardex;
 
+        const float em = ImGui::GetFontSize();
+
         ImGui::TextColored(ImVec4(0.45f, 0.25f, 0.08f, 1.0f),
                            "Kardex de Inventario (Arbol AVL auto-balanceado)");
         ImGui::Text("Total de movimientos en AVL: %zu | Estado: %s",
@@ -1392,13 +1468,19 @@ namespace
                     sistema.getKardex().verificarBalanceoAVL() ? "BALANCEADO (OK)" : "DESBALANCEADO");
         ImGui::Spacing();
 
-        // Filtros de rango
-        ImGui::SetNextItemWidth(70.0f); ImGui::InputInt("Dia Ini", &dIni); ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f); ImGui::InputInt("Mes Ini", &mIni); ImGui::SameLine();
-        ImGui::SetNextItemWidth(85.0f); ImGui::InputInt("Anio Ini", &aIni); ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f); ImGui::InputInt("Dia Fin", &dFin); ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f); ImGui::InputInt("Mes Fin", &mFin); ImGui::SameLine();
-        ImGui::SetNextItemWidth(85.0f); ImGui::InputInt("Anio Fin", &aFin); ImGui::SameLine();
+        // Filtros de rango compactos y adaptativos
+        ImGui::TextUnformatted("Desde:"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(3.2f * em); ImGui::InputInt("##dIni", &dIni, 0, 0); ImGui::SameLine();
+        ImGui::TextUnformatted("/"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(3.2f * em); ImGui::InputInt("##mIni", &mIni, 0, 0); ImGui::SameLine();
+        ImGui::TextUnformatted("/"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(4.5f * em); ImGui::InputInt("##aIni", &aIni, 0, 0); ImGui::SameLine();
+        ImGui::TextUnformatted("  Hasta:"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(3.2f * em); ImGui::InputInt("##dFin", &dFin, 0, 0); ImGui::SameLine();
+        ImGui::TextUnformatted("/"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(3.2f * em); ImGui::InputInt("##mFin", &mFin, 0, 0); ImGui::SameLine();
+        ImGui::TextUnformatted("/"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(4.5f * em); ImGui::InputInt("##aFin", &aFin, 0, 0); ImGui::SameLine();
         if (ImGui::Button("Ver Todo"))
         {
             dIni = 1; mIni = 1; aIni = 2020;
@@ -1411,18 +1493,20 @@ namespace
             sistema.getKardex().consultarPorRangoFechas(fIni, fFin);
 
         ImGui::Spacing();
+        float altoTablaKardex = -ImGui::GetFrameHeightWithSpacing() * 5.2f;
         if (ImGui::BeginTable("TablaKardexAVL", 7,
                               ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                              ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp,
-                              ImVec2(0.0f, 300.0f)))
+                              ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable,
+                              ImVec2(0.0f, altoTablaKardex)))
         {
-            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 32.0f);
-            ImGui::TableSetupColumn("Fecha", ImGuiTableColumnFlags_WidthFixed, 85.0f);
-            ImGui::TableSetupColumn("Tipo", ImGuiTableColumnFlags_WidthFixed, 130.0f);
-            ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 105.0f);
-            ImGui::TableSetupColumn("Nombre (Hash O(1))", ImGuiTableColumnFlags_WidthFixed, 180.0f);
-            ImGui::TableSetupColumn("Cantidad", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-            ImGui::TableSetupColumn("Concepto", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 2.4f * em);
+            ImGui::TableSetupColumn("Fecha", ImGuiTableColumnFlags_WidthFixed, 6.6f * em);
+            ImGui::TableSetupColumn("Tipo", ImGuiTableColumnFlags_WidthFixed, 9.8f * em);
+            ImGui::TableSetupColumn("SKU", ImGuiTableColumnFlags_WidthFixed, 7.6f * em);
+            ImGui::TableSetupColumn("Nombre (Hash O(1))", ImGuiTableColumnFlags_WidthFixed, 13.5f * em);
+            ImGui::TableSetupColumn("Cant.", ImGuiTableColumnFlags_WidthFixed, 5.2f * em);
+            ImGui::TableSetupColumn("Concepto", ImGuiTableColumnFlags_WidthFixed, 24.0f * em);
             ImGui::TableHeadersRow();
 
             for (size_t i = 0; i < movs.size(); ++i)
@@ -1444,20 +1528,20 @@ namespace
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Registrar Movimiento Manual en Kardex AVL:");
-        ImGui::SetNextItemWidth(160.0f);
+        ImGui::SetNextItemWidth(9.0f * em);
         ImGui::InputText("SKU Item", movSku, sizeof(movSku));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(180.0f);
-        ImGui::InputText("Nombre (si es SKU nuevo)", movNombre, sizeof(movNombre));
+        ImGui::SetNextItemWidth(12.5f * em);
+        ImGui::InputText("Nombre (SKU nuevo)", movNombre, sizeof(movNombre));
         ImGui::SameLine();
         const char* tiposMov[] = {"Entrada (Compra)", "Ajuste (Inventario)"};
-        ImGui::SetNextItemWidth(165.0f);
+        ImGui::SetNextItemWidth(10.5f * em);
         ImGui::Combo("Tipo", &movTipoIdx, tiposMov, 2);
 
-        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SetNextItemWidth(7.2f * em);
         ImGui::InputFloat("Cantidad", &movCant, 1.0f, 5.0f, "%.2f");
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(280.0f);
+        ImGui::SetNextItemWidth(17.5f * em);
         ImGui::InputText("Concepto", movDesc, sizeof(movDesc));
         ImGui::SameLine();
         if (ImGui::Button("Registrar en AVL"))
@@ -1514,7 +1598,24 @@ namespace
         ImGui::Begin("BakerySystemMain", nullptr, flagsPanel);
 
         ImGui::TextColored(ImVec4(0.55f, 0.28f, 0.06f, 1.0f),
-                           "BAKERY SYSTEM — GESTION INTEGRAL DE PANADERIA");
+                           "BAKERY SYSTEM - GESTION INTEGRAL DE PANADERIA");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("A-"))
+        {
+            io.FontGlobalScale = (io.FontGlobalScale > 0.85f) ? (io.FontGlobalScale - 0.10f) : 0.85f;
+        }
+        ImGui::SameLine();
+        char lblZoom[24];
+        std::snprintf(lblZoom, sizeof(lblZoom), "%.0f%%", io.FontGlobalScale * 100.0f);
+        if (ImGui::SmallButton(lblZoom))
+        {
+            io.FontGlobalScale = 1.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("A+"))
+        {
+            io.FontGlobalScale = (io.FontGlobalScale < 1.65f) ? (io.FontGlobalScale + 0.10f) : 1.65f;
+        }
         ImGui::SameLine();
         if (ImGui::SmallButton("Recargar JSON"))
         {
@@ -1531,43 +1632,42 @@ namespace
                 estadoPersistencia = "Guardado en " + RUTA_PERSISTENCIA_JSON;
             }
         }
-        ImGui::SameLine();
-        ImGui::TextDisabled(" | %s", estadoPersistencia.c_str());
+        ImGui::TextDisabled("%s", estadoPersistencia.c_str());
 
         ImGui::Separator();
         ImGui::Spacing();
 
         if (ImGui::BeginTabBar("MenuPrincipalTabs"))
         {
-            if (ImGui::BeginTabItem("1. POS y Catalogo Paginado"))
+            if (ImGui::BeginTabItem("1. Punto de Venta (POS)"))
             {
                 ImGui::Spacing();
                 renderPestanaPOS(sistema, skuBusquedaPos, skuBusquedaPosTam, busquedaPosEjecutada);
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("2. Alta Productos y Recetas"))
+            if (ImGui::BeginTabItem("2. Catalogo y Recetas"))
             {
                 ImGui::Spacing();
                 renderPestanaCatalogoYRecetas(sistema);
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("3. Cocina y Explosion (DFS)"))
+            if (ImGui::BeginTabItem("3. Cocina y Explosion DFS"))
             {
                 ImGui::Spacing();
                 renderPestanaCocina(sistema);
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("4. Lotes (SLList) y Perecederos (Min-Heap)"))
+            if (ImGui::BeginTabItem("4. Lotes y Perecederos"))
             {
                 ImGui::Spacing();
                 renderPestanaTrazabilidadYPerecederos(sistema);
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("5. Kardex de Inventario (AVL)"))
+            if (ImGui::BeginTabItem("5. Kardex Inventario (AVL)"))
             {
                 ImGui::Spacing();
                 renderPestanaKardex(sistema);
@@ -1586,8 +1686,8 @@ struct WGL_WindowData { HDC hDC; };
 
 static HGLRC          g_hRC = nullptr;
 static WGL_WindowData g_MainWindow = {nullptr};
-static int            g_Width = 1180;
-static int            g_Height = 760;
+static int            g_Width = 1280;
+static int            g_Height = 820;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -1712,6 +1812,7 @@ int main(int /*argc*/, char* /*argv*/[])
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    configurarTipografiaLegible(io);
     aplicarEstiloPanaderia();
 
     ImGui_ImplWin32_InitForOpenGL(hwnd);
@@ -1802,8 +1903,8 @@ int main(int /*argc*/, char* /*argv*/[])
         "Bakery System - Gestion Panadera ULA (Programacion III)",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        1220,
-        780,
+        1280,
+        820,
         windowFlags
     );
 
@@ -1823,6 +1924,7 @@ int main(int /*argc*/, char* /*argv*/[])
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    configurarTipografiaLegible(io);
     aplicarEstiloPanaderia();
 
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
