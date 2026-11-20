@@ -86,4 +86,7 @@ AGENTS.md
 # Archivo de configuración de ventanas generado por Dear ImGui en tiempo de ejecución
 imgui.ini
 
+# Persistencia local generada en tiempo de ejecucion (JSON)
+data/
+
 

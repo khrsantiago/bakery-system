@@ -10,7 +10,8 @@
 enum class TipoMovimiento {
     ENTRADA_COMPRA,
     EGRESO_PRODUCCION,
-    AJUSTE_INVENTARIO
+    AJUSTE_INVENTARIO,
+    VENTA_POS
 };
 
 // Función auxiliar para convertir el enum TipoMovimiento a texto legible
@@ -21,6 +22,7 @@ inline std::string tipoMovimientoToString(TipoMovimiento tipo)
         case TipoMovimiento::ENTRADA_COMPRA:    return "ENTRADA (Compra)";
         case TipoMovimiento::EGRESO_PRODUCCION: return "EGRESO (Produccion)";
         case TipoMovimiento::AJUSTE_INVENTARIO: return "AJUSTE (Inventario)";
+        case TipoMovimiento::VENTA_POS:         return "VENTA (POS)";
         default:                                return "DESCONOCIDO";
     }
 }
@@ -28,9 +30,9 @@ inline std::string tipoMovimientoToString(TipoMovimiento tipo)
 // Estructura que representa cada transacción en el Kardex
 struct MovimientoKardex {
     fecha fechaTransaccion;
-    std::string codigoSKU;     // SKU de la materia prima (ej. MP-HAR-001)
-    TipoMovimiento tipo;       // EGRESO_PRODUCCION
-    double cantidad;           // Cantidad desglosada y consolidada por el DFS
+    std::string codigoSKU;     // SKU de la materia prima o producto (ej. MP-HAR-001)
+    TipoMovimiento tipo;       // Tipo de transacción
+    double cantidad;           // Cantidad desglosada o vendida
     std::string descripcion;   // Ej: "Salida por produccion de SKU: PAN-JAM-001"
     size_t idMovimiento = 0;   // Identificador secuencial para desempate estricto en el AVL
 

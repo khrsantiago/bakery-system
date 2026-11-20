@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include "SistemaPanaderia.hpp"
 #include "KardexInventario.hpp"
@@ -327,6 +328,107 @@ int main()
 
     kardex.mostrarMovimientosPorRango({5, 11, 2026}, {15, 11, 2026});
     kardex.mostrarHistorialCompleto();
+
+    // 10. Prueba de Unificación, Nombres por SKU O(1), POS y Persistencia JSON
+    std::cout << "==================================================\n";
+    std::cout << "  PRUEBA DE UNIFICACION, POS Y PERSISTENCIA JSON\n";
+    std::cout << "==================================================\n\n";
+
+    SistemaPanaderia sistemaUnificado;
+    sistemaUnificado.cargarDatosPorDefecto();
+
+    bool listaOk = (sistemaUnificado.obtenerListaProductos().size() == static_cast<size_t>(3));
+    std::cout << "[+] Lista indexable de productos (3 esperados): "
+              << (listaOk ? "OK" : "FALLO") << "\n";
+    if (!listaOk)
+    {
+        return 1;
+    }
+
+    bool nombresOk =
+        (sistemaUnificado.obtenerNombreSKU("PAN-JAM-001") == "Pan de Jamon Tradicional") &&
+        (sistemaUnificado.obtenerNombreSKU("SUB-REL-001") == "Relleno Pan de Jamon") &&
+        (sistemaUnificado.obtenerNombreSKU("MP-HAR-001") == "Harina Panadera");
+    std::cout << "[+] Resolucion O(1) SKU -> Nombre (producto/subprod/insumo): "
+              << (nombresOk ? "OK" : "FALLO") << "\n";
+    if (!nombresOk)
+    {
+        return 1;
+    }
+
+    bool validacionSkuOk =
+        sistemaUnificado.existeProducto("PAN-JAM-001") &&
+        !sistemaUnificado.existeProducto("SKU-INEXISTENTE");
+    std::cout << "[+] Validacion temprana de SKU existente/inexistente: "
+              << (validacionSkuOk ? "OK" : "FALLO") << "\n";
+    if (!validacionSkuOk)
+    {
+        return 1;
+    }
+
+    bool ventaOk = sistemaUnificado.registrarVentaPOS("PAN-JAM-001", 5, {19, 11, 2026});
+    bool ventaExcesoRechazada = !sistemaUnificado.registrarVentaPOS("PAN-JAM-001", 999, {19, 11, 2026});
+    ProductoPanaderia* prodVendido = sistemaUnificado.buscarProducto("PAN-JAM-001");
+    bool posIntegradoOk =
+        ventaOk &&
+        ventaExcesoRechazada &&
+        (prodVendido != nullptr) &&
+        (prodVendido->getStockActual() == 45) &&
+        (sistemaUnificado.getKardex().totalMovimientos() == static_cast<size_t>(5));
+    std::cout << "[+] Venta POS vinculada a stock (50->45) y Kardex AVL (4->5): "
+              << (posIntegradoOk ? "OK" : "FALLO") << "\n";
+    if (!posIntegradoOk)
+    {
+        return 1;
+    }
+
+    const std::string rutaJsonPrueba = "build/test_bakery_data.json";
+    bool guardadoOk = sistemaUnificado.guardarDatosJSON(rutaJsonPrueba);
+    std::cout << "[+] Serializacion a JSON (" << rutaJsonPrueba << "): "
+              << (guardadoOk ? "OK" : "FALLO") << "\n";
+    if (!guardadoOk)
+    {
+        return 1;
+    }
+
+    SistemaPanaderia sistemaCargado;
+    bool cargadoOk = sistemaCargado.cargarDatosJSON(rutaJsonPrueba);
+    std::cout << "[+] Carga desde JSON en nueva instancia: "
+              << (cargadoOk ? "OK" : "FALLO") << "\n";
+    if (!cargadoOk)
+    {
+        std::filesystem::remove(rutaJsonPrueba);
+        return 1;
+    }
+
+    ProductoPanaderia* prodCargado = sistemaCargado.buscarProducto("PAN-JAM-001");
+    Receta* recCargada = sistemaCargado.buscarReceta("PAN-JAM-001");
+    Designar::DynArray<ElementoReceta> insumosRecCargada;
+    if (recCargada != nullptr)
+    {
+        recCargada->calcularMateriasPrimas(10.0, insumosRecCargada);
+    }
+
+    bool persistenciaCompletaOk =
+        (sistemaCargado.obtenerListaProductos().size() == static_cast<size_t>(3)) &&
+        (prodCargado != nullptr && prodCargado->getStockActual() == 45) &&
+        (recCargada != nullptr && insumosRecCargada.size() == static_cast<size_t>(10)) &&
+        (sistemaCargado.getLotes().size() == static_cast<size_t>(1)) &&
+        (sistemaCargado.getLotes()[0].getCodigoLote() == "LOT-20261106-001") &&
+        (sistemaCargado.getLotes()[0].getNumeroEventos() == static_cast<size_t>(6)) &&
+        (sistemaCargado.totalPerecederos() == static_cast<size_t>(4)) &&
+        (sistemaCargado.consultarProximoAVencer().getSKU() == "MP-LEC-001") &&
+        (sistemaCargado.getKardex().totalMovimientos() == static_cast<size_t>(5)) &&
+        sistemaCargado.getKardex().verificarBalanceoAVL();
+
+    std::filesystem::remove(rutaJsonPrueba);
+
+    std::cout << "[+] Integridad total tras recarga JSON (productos, DFS, SLList, Min-Heap, AVL): "
+              << (persistenciaCompletaOk ? "OK" : "FALLO") << "\n";
+    if (!persistenciaCompletaOk)
+    {
+        return 1;
+    }
 
     return 0;
 }
