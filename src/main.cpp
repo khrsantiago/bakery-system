@@ -160,16 +160,25 @@ int main()
     lote1.registrarEvento("Horneado", "Horneado a 180C durante 35 min", "Juan Rincon", {6, 11, 2026});
     lote1.registrarEvento("Control de Calidad", "Inspeccion de corteza, peso y empaque", "Khristopher Santiago", {6, 11, 2026});
 
-    // 5. Almacén de Perecederos (DynHeap / Min-Heap FEFO)
-    GestionPerecederos almacen;
-    almacen.registrarPerecedero(ProductoPanaderia("MP-LEV-001", "Levadura Fresca en Pasta", TipoMasaBase::BLANDA_ENRIQUECIDA,
+    // 5. Almacén de Perecederos integrado en SistemaPanaderia (DynHeap / Min-Heap FEFO)
+    sistema.registrarPerecedero(ProductoPanaderia("MP-LEV-001", "Levadura Fresca en Pasta", TipoMasaBase::BLANDA_ENRIQUECIDA,
                                                  0, 0, 0, 0, 0, 1.0, 20, 5, {12, 11, 2026}, 1.20));
-    almacen.registrarPerecedero(ProductoPanaderia("MP-JAM-001", "Jamon Ahumado Especial", TipoMasaBase::BLANDA_ENRIQUECIDA,
+    sistema.registrarPerecedero(ProductoPanaderia("MP-JAM-001", "Jamon Ahumado Especial", TipoMasaBase::BLANDA_ENRIQUECIDA,
                                                  0, 0, 0, 0, 0, 1.0, 50, 10, {20, 11, 2026}, 8.50));
-    almacen.registrarPerecedero(ProductoPanaderia("MP-LEC-001", "Leche Pasteurizada Completa", TipoMasaBase::BLANDA_ENRIQUECIDA,
+    sistema.registrarPerecedero(ProductoPanaderia("MP-LEC-001", "Leche Pasteurizada Completa", TipoMasaBase::BLANDA_ENRIQUECIDA,
                                                  0, 0, 0, 0, 0, 1.0, 30, 5, {8, 11, 2026}, 1.80)); // Vence primero
-    almacen.registrarPerecedero(ProductoPanaderia("MP-MAR-001", "Margarina con Sal", TipoMasaBase::BLANDA_ENRIQUECIDA,
+    sistema.registrarPerecedero(ProductoPanaderia("MP-MAR-001", "Margarina con Sal", TipoMasaBase::BLANDA_ENRIQUECIDA,
                                                  0, 0, 0, 0, 0, 1.0, 40, 10, {25, 12, 2026}, 3.00));
+
+    // 6. Precarga inicial de entradas en el Kardex de Inventario (Árbol AVL)
+    sistema.registrarMovimientoInventario({{1, 11, 2026}, "MP-HAR-001", TipoMovimiento::ENTRADA_COMPRA,
+                                           150.0, "Compra inicial de harina panadera - Molino Los Andes"});
+    sistema.registrarMovimientoInventario({{5, 11, 2026}, "MP-JAM-001", TipoMovimiento::ENTRADA_COMPRA,
+                                           40.0, "Ingreso de jamon ahumado especial"});
+    sistema.registrarMovimientoInventario({{10, 11, 2026}, "MP-LEV-001", TipoMovimiento::ENTRADA_COMPRA,
+                                           20.0, "Reposicion de levadura fresca"});
+    sistema.registrarMovimientoInventario({{15, 11, 2026}, "MP-AZU-001", TipoMovimiento::ENTRADA_COMPRA,
+                                           50.0, "Compra de azucar blanquilla"});
 
     // =========================================================================
     // BUCLE DEL MENÚ INTERACTIVO (CLI - POS & PRODUCCIÓN)
@@ -197,7 +206,7 @@ int main()
         {
             std::cin.clear();
             limpiarBuffer();
-            std::cout << "[!] Entrada invalida. Ingrese un numero del 1 al 6.\n";
+            std::cout << "[!] Entrada invalida. Ingrese un numero del 1 al 7.\n";
             continue;
         }
         limpiarBuffer();
@@ -262,14 +271,10 @@ int main()
                     }
                 }
 
-                // Generar el reporte visual para la cocina
+                // Genera el reporte de cocina y registra automáticamente los egresos en el Kardex AVL
                 sistema.generarReporteCocina(sku, cantidadDeseada);
 
-                // Procesar la orden y registrar egresos automáticamente en Kardex
-                Designar::DynArray<ElementoReceta> insumosDesglosados;
-                fecha fechaHoy = obtenerFechaActual();
-
-                if (sistema.procesarPedidoProduccion(sku, cantidadDeseada, fechaHoy, insumosDesglosados))
+                if (sistema.buscarReceta(sku) != nullptr)
                 {
                     std::cout << "[+] Movimientos de egreso registrados exitosamente en el Kardex AVL.\n";
                 }
@@ -410,11 +415,11 @@ int main()
                 std::cout << "\n--------------------------------------------------\n";
                 std::cout << " 5. GESTION DE PERECEDEROS (Min-Heap / FEFO)      \n";
                 std::cout << "--------------------------------------------------\n";
-                std::cout << " Insumos perecederos en almacen: " << almacen.totalPerecederos() << "\n\n";
+                std::cout << " Insumos perecederos en almacen: " << sistema.totalPerecederos() << "\n\n";
 
-                if (almacen.tienePerecederos())
+                if (sistema.tienePerecederos())
                 {
-                    ProductoPanaderia prox = almacen.consultarProximoAVencer();
+                    ProductoPanaderia prox = sistema.consultarProximoAVencer();
                     fecha f = prox.getFechaVencimiento();
                     std::cout << "[!] Insumo MAS proximo a vencer (Cima del Min-Heap):\n"
                               << "    -> " << prox.getNombre() << " (SKU: " << prox.getSKU() << ")\n"
@@ -441,9 +446,9 @@ int main()
 
                 if (subopc == 1)
                 {
-                    if (almacen.tienePerecederos())
+                    if (sistema.tienePerecederos())
                     {
-                        ProductoPanaderia desp = almacen.despacharProximoAVencer();
+                        ProductoPanaderia desp = sistema.despacharProximoAVencer();
                         fecha f = desp.getFechaVencimiento();
                         std::cout << "\n[+] DESPACHADO (FEFO): " << desp.getNombre()
                                   << " (Vencimiento: " << f.dia << "/" << f.mes << "/" << f.anio << ")\n";
@@ -455,7 +460,7 @@ int main()
                 }
                 else if (subopc == 2)
                 {
-                    if (!almacen.tienePerecederos())
+                    if (!sistema.tienePerecederos())
                     {
                         std::cout << "\n[!] El almacen esta vacio.\n";
                     }
@@ -463,9 +468,9 @@ int main()
                     {
                         std::cout << "\n--> Despachando todos los perecederos por orden FEFO:\n";
                         int num = 1;
-                        while (almacen.tienePerecederos())
+                        while (sistema.tienePerecederos())
                         {
-                            ProductoPanaderia desp = almacen.despacharProximoAVencer();
+                            ProductoPanaderia desp = sistema.despacharProximoAVencer();
                             fecha f = desp.getFechaVencimiento();
                             std::cout << "  " << num++ << ". [" << f.dia << "/" << f.mes << "/" << f.anio << "] "
                                       << desp.getNombre() << " (SKU: " << desp.getSKU() << ")\n";
@@ -503,7 +508,7 @@ int main()
                 break;
 
             default:
-                std::cout << "[!] Opcion desconocida. Seleccione entre 1 y 6.\n";
+                std::cout << "[!] Opcion desconocida. Seleccione entre 1 y 7.\n";
                 pausar();
                 break;
         }

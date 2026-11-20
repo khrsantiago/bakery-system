@@ -13,7 +13,9 @@ Designar::nat_t hashSKU(const std::string& sku)
 
 SistemaPanaderia::SistemaPanaderia()
     : catalogoRecetas(std::equal_to<std::string>(), &hashSKU),
-      catalogoProductos(std::equal_to<std::string>(), &hashSKU)
+      catalogoProductos(std::equal_to<std::string>(), &hashSKU),
+      kardex(),
+      almacenPerecederos()
 {
 }
 
@@ -99,12 +101,17 @@ bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku,
     // 3. 🔹 NUEVO: Conversión a Movimientos y Registro en Kardex AVL en O(k log n)
     if (!insumosConsolidados.is_empty()) {
         Designar::DynArray<MovimientoKardex> egresos = generarMovimientosEgreso(insumosConsolidados, sku, fechaHoy);
-        for (size_t i = 0; i < egresos.size(); ++i) {
-            kardex.registrarMovimiento(egresos[i]);
-        }
+        kardex.registrarMovimientos(egresos);
     }
 
     return true;
+}
+
+bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku,
+                                                double cantidadSolicitadaKg,
+                                                Designar::DynArray<ElementoReceta>& insumosConsolidados)
+{
+    return procesarPedidoProduccion(sku, cantidadSolicitadaKg, obtenerFechaActual(), insumosConsolidados);
 }
 
 void SistemaPanaderia::generarReporteCocina(const std::string& sku, double cantidadSolicitadaKg)
@@ -159,6 +166,51 @@ void SistemaPanaderia::registrarMovimientoInventario(const MovimientoKardex& mov
 
 void SistemaPanaderia::consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const {
     kardex.mostrarMovimientosPorRango(fechaInicio, fechaFin);
+}
+
+KardexInventario& SistemaPanaderia::getKardex()
+{
+    return kardex;
+}
+
+const KardexInventario& SistemaPanaderia::getKardex() const
+{
+    return kardex;
+}
+
+void SistemaPanaderia::registrarPerecedero(const ProductoPanaderia& prod)
+{
+    almacenPerecederos.registrarPerecedero(prod);
+}
+
+ProductoPanaderia SistemaPanaderia::consultarProximoAVencer() const
+{
+    return almacenPerecederos.consultarProximoAVencer();
+}
+
+ProductoPanaderia SistemaPanaderia::despacharProximoAVencer()
+{
+    return almacenPerecederos.despacharProximoAVencer();
+}
+
+bool SistemaPanaderia::tienePerecederos() const
+{
+    return almacenPerecederos.tienePerecederos();
+}
+
+size_t SistemaPanaderia::totalPerecederos() const
+{
+    return almacenPerecederos.totalPerecederos();
+}
+
+GestionPerecederos& SistemaPanaderia::getAlmacenPerecederos()
+{
+    return almacenPerecederos;
+}
+
+const GestionPerecederos& SistemaPanaderia::getAlmacenPerecederos() const
+{
+    return almacenPerecederos;
 }
 
 fecha obtenerFechaActual() {
