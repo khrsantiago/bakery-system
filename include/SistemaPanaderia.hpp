@@ -5,6 +5,8 @@
 #include "receta.hpp"
 #include "LoteProduccion.hpp"
 #include "GestionPerecederos.hpp"
+#include "KardexInventario.hpp"
+#include <ctime> // Para obtener fecha actual
 
 /**
  * Función de dispersión (FNV-1a 64-bit) optimizada para códigos SKU alfanuméricos.
@@ -19,7 +21,11 @@ private:
     Designar::HashMap<std::string, Receta*> catalogoRecetas;
     // Tabla Hash para catálogo de productos por SKU (Búsqueda promedio O(1))
     Designar::HashMap<std::string, ProductoPanaderia*> catalogoProductos;
-
+    // Árbol AVL para Kardex de inventario indexado por fecha
+    KardexInventario kardex;
+    // Min-Heap para gestión FEFO de insumos perecederos
+    GestionPerecederos almacenPerecederos;
+    
 public:
     SistemaPanaderia();
     ~SistemaPanaderia();
@@ -47,9 +53,35 @@ public:
     // ORQUESTACIÓN DE PRODUCCIÓN (Conector Hash O(1) -> Árbol DFS O(n))
     // =========================================================================
 
-    bool procesarPedidoProduccion(const std::string& sku, double cantidadSolicitadaKg, Designar::DynArray<ElementoReceta>& insumosConsolidados);
+    bool procesarPedidoProduccion(const std::string& sku,
+                                  double cantidadSolicitadaKg,
+                                  const fecha& fechaHoy,
+                                  Designar::DynArray<ElementoReceta>& insumosConsolidados);
+
+    bool procesarPedidoProduccion(const std::string& sku,
+                                  double cantidadSolicitadaKg,
+                                  Designar::DynArray<ElementoReceta>& insumosConsolidados);
 
     void generarReporteCocina(const std::string& sku, double cantidadSolicitadaKg);
+
+    // =========================================================================
+    // KARDEX DE INVENTARIO (Árbol AVL) Y PERECEDEROS FEFO (Min-Heap)
+    // =========================================================================
+
+    void registrarMovimientoInventario(const MovimientoKardex& mov);
+    void consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const;
+    KardexInventario& getKardex();
+    const KardexInventario& getKardex() const;
+
+    void registrarPerecedero(const ProductoPanaderia& prod);
+    ProductoPanaderia consultarProximoAVencer() const;
+    ProductoPanaderia despacharProximoAVencer();
+    bool tienePerecederos() const;
+    size_t totalPerecederos() const;
+    GestionPerecederos& getAlmacenPerecederos();
+    const GestionPerecederos& getAlmacenPerecederos() const;
 };
+
+fecha obtenerFechaActual();
 
 #endif // SISTEMA_PANADERIA_HPP

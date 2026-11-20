@@ -2,7 +2,7 @@
 #define RECETA_HPP
 #include <mtreenode.hpp>
 #include "ProductoPanaderia.hpp"
-
+#include "MovimientoKardex.hpp" 
 class ElementoReceta
 {
 private:
@@ -52,4 +52,9 @@ public:
     void calcularMateriasPrimas(double cantidadRequerida, Designar::DynArray<ElementoReceta>& insumos);
     ~Receta();
 };
+Designar::DynArray<MovimientoKardex> generarMovimientosEgreso(
+    const Designar::DynArray<ElementoReceta>& insumosConsolidados,
+    const std::string& skuProductoFinal,
+    const fecha& fechaHoy
+);
 #endif

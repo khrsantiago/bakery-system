@@ -13,7 +13,9 @@ Designar::nat_t hashSKU(const std::string& sku)
 
 SistemaPanaderia::SistemaPanaderia()
     : catalogoRecetas(std::equal_to<std::string>(), &hashSKU),
-      catalogoProductos(std::equal_to<std::string>(), &hashSKU)
+      catalogoProductos(std::equal_to<std::string>(), &hashSKU),
+      kardex(),
+      almacenPerecederos()
 {
 }
 
@@ -79,13 +81,14 @@ bool SistemaPanaderia::eliminarReceta(const std::string& sku)
     return catalogoRecetas.remove(sku);
 }
 
-bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, double cantidadSolicitadaKg, Designar::DynArray<ElementoReceta>& insumosConsolidados)
+bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, 
+                                              double cantidadSolicitadaKg, 
+                                              const fecha& fechaHoy, 
+                                              Designar::DynArray<ElementoReceta>& insumosConsolidados) 
 {
     // 1. Búsqueda en O(1) sobre la Tabla Hash
     Receta** ptrReceta = catalogoRecetas.search(sku);
-
-    if (ptrReceta == nullptr || *ptrReceta == nullptr)
-    {
+    if (ptrReceta == nullptr || *ptrReceta == nullptr) {
         std::cerr << "[!] Error: No se encontró receta para el SKU: " << sku << "\n";
         return false;
     }
@@ -95,7 +98,20 @@ bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku, double c
     // 2. Desglose recursivo DFS en O(n) sobre el Árbol General
     recetaElegida->calcularMateriasPrimas(cantidadSolicitadaKg, insumosConsolidados);
 
+    // 3. 🔹 NUEVO: Conversión a Movimientos y Registro en Kardex AVL en O(k log n)
+    if (!insumosConsolidados.is_empty()) {
+        Designar::DynArray<MovimientoKardex> egresos = generarMovimientosEgreso(insumosConsolidados, sku, fechaHoy);
+        kardex.registrarMovimientos(egresos);
+    }
+
     return true;
+}
+
+bool SistemaPanaderia::procesarPedidoProduccion(const std::string& sku,
+                                                double cantidadSolicitadaKg,
+                                                Designar::DynArray<ElementoReceta>& insumosConsolidados)
+{
+    return procesarPedidoProduccion(sku, cantidadSolicitadaKg, obtenerFechaActual(), insumosConsolidados);
 }
 
 void SistemaPanaderia::generarReporteCocina(const std::string& sku, double cantidadSolicitadaKg)
@@ -107,7 +123,9 @@ void SistemaPanaderia::generarReporteCocina(const std::string& sku, double canti
     std::cout << "=======================================================\n";
 
     // 1. Ejecuta la búsqueda O(1) en la Tabla Hash y la explosión DFS O(n)
-    if (!procesarPedidoProduccion(sku, cantidadSolicitadaKg, insumosConsolidados)) {
+    fecha fechaHoy = obtenerFechaActual();
+
+    if (!procesarPedidoProduccion(sku, cantidadSolicitadaKg, fechaHoy, insumosConsolidados)) {
         std::cout << "[!] No se pudo generar el reporte. Verifique el SKU ingresado.\n";
         std::cout << "=======================================================\n\n";
         return;
@@ -140,4 +158,68 @@ void SistemaPanaderia::generarReporteCocina(const std::string& sku, double canti
     std::cout << " Total de Insumos Domiciliados : " << insumosConsolidados.size() << "\n";
     std::cout << " Estado                        : LISTO PARA PREPARACIÓN\n";
     std::cout << "=======================================================\n\n";
+}
+
+void SistemaPanaderia::registrarMovimientoInventario(const MovimientoKardex& mov) {
+    kardex.registrarMovimiento(mov);
+}
+
+void SistemaPanaderia::consultarKardexPorRangoFechas(const fecha& fechaInicio, const fecha& fechaFin) const {
+    kardex.mostrarMovimientosPorRango(fechaInicio, fechaFin);
+}
+
+KardexInventario& SistemaPanaderia::getKardex()
+{
+    return kardex;
+}
+
+const KardexInventario& SistemaPanaderia::getKardex() const
+{
+    return kardex;
+}
+
+void SistemaPanaderia::registrarPerecedero(const ProductoPanaderia& prod)
+{
+    almacenPerecederos.registrarPerecedero(prod);
+}
+
+ProductoPanaderia SistemaPanaderia::consultarProximoAVencer() const
+{
+    return almacenPerecederos.consultarProximoAVencer();
+}
+
+ProductoPanaderia SistemaPanaderia::despacharProximoAVencer()
+{
+    return almacenPerecederos.despacharProximoAVencer();
+}
+
+bool SistemaPanaderia::tienePerecederos() const
+{
+    return almacenPerecederos.tienePerecederos();
+}
+
+size_t SistemaPanaderia::totalPerecederos() const
+{
+    return almacenPerecederos.totalPerecederos();
+}
+
+GestionPerecederos& SistemaPanaderia::getAlmacenPerecederos()
+{
+    return almacenPerecederos;
+}
+
+const GestionPerecederos& SistemaPanaderia::getAlmacenPerecederos() const
+{
+    return almacenPerecederos;
+}
+
+fecha obtenerFechaActual() {
+    std::time_t t = std::time(nullptr);
+    std::tm* ahora = std::localtime(&t);
+    
+    return {
+        ahora->tm_mday,         // Día del mes (1-31)
+        ahora->tm_mon + 1,      // Mes (0-11) -> sumamos 1 para (1-12)
+        ahora->tm_year + 1900   // Años desde 1900 -> sumamos 1900
+    };
 }

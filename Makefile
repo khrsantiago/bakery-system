@@ -25,9 +25,10 @@ ifeq ($(OS),Windows_NT)
     EXEC        = $(subst /,\,$(TARGET))
     EXEC_GUI    = $(subst /,\,$(GUI_TARGET))
     EXEC_TEST   = $(subst /,\,$(TEST_TARGET))
-    # En Windows usa Win32 + WGL OpenGL nativos (cero dependencias externas)
-    SDL2_CFLAGS           :=
-    GUI_LIBS              := -lopengl32 -lgdi32 -ldwmapi -limm32
+    
+    # En Windows: Enlace estático + Ocultar consola (-mwindows) + Librerías Win32/OpenGL
+    SDL2_CFLAGS           := 
+    GUI_LIBS              := -static -static-libgcc -static-libstdc++ -mwindows -lopengl32 -lgdi32 -ldwmapi -limm32
     IMGUI_BACKEND_EXCLUDE := $(IMGUI_DIR)/imgui_impl_sdl2.cpp
 else
     MKDIR_BUILD = mkdir -p $(BUILDDIR)
@@ -37,13 +38,15 @@ else
     EXEC_GUI    = ./$(GUI_TARGET)
     EXEC_TEST   = ./$(TEST_TARGET)
     IMGUI_BACKEND_EXCLUDE := $(IMGUI_DIR)/imgui_impl_win32.cpp
+    
     UNAME_S     := $(shell uname -s)
     ifeq ($(UNAME_S),Darwin)
         SDL2_CFLAGS := $(shell sdl2-config --cflags)
         GUI_LIBS    := $(shell sdl2-config --libs) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
     else
+        # En Linux: Portabilidad estática del runtime de C++ + SDL2/OpenGL
         SDL2_CFLAGS := $(shell sdl2-config --cflags)
-        GUI_LIBS    := $(shell sdl2-config --libs) -lGL -ldl
+        GUI_LIBS    := -static-libgcc -static-libstdc++ $(shell sdl2-config --libs) -lGL -ldl
     endif
 endif
 

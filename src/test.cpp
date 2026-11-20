@@ -1,5 +1,6 @@
 #include <iostream>
 #include "SistemaPanaderia.hpp"
+#include "KardexInventario.hpp"
 
 int main()
 {
@@ -216,7 +217,116 @@ int main()
     bool yaNoEsta = (sistema.buscarProducto("PAN-CAN-001") == nullptr);
     std::cout << "[+] Eliminacion O(1) de PAN-CAN-001: "
               << (eliminado && yaNoEsta ? "OK" : "FALLO") << "\n";
+    std::cout << "==================================================\n\n";
+
+    // 9. Prueba de Kardex de Inventario con Árbol AVL (Semana 13)
     std::cout << "==================================================\n";
+    std::cout << "  PRUEBA DE KARDEX DE INVENTARIO (ARBOL AVL)\n";
+    std::cout << "==================================================\n\n";
+
+    KardexInventario kardex;
+    bool inicioVacio = kardex.estaVacio();
+    std::cout << "[+] Kardex inicialmente vacio: "
+              << (inicioVacio ? "OK" : "FALLO") << "\n";
+    if (!inicioVacio)
+    {
+        return 1;
+    }
+
+    // Inserciones en fechas desordenadas para ejercitar rotaciones del Árbol AVL
+    kardex.registrarMovimiento({20, 11, 2026}, "MP-HAR-001", TipoMovimiento::ENTRADA_COMPRA,
+                               100.0, "Compra de harina panadera - Molino Los Andes");
+    kardex.registrarMovimiento({1, 11, 2026}, "MP-HAR-001", TipoMovimiento::ENTRADA_COMPRA,
+                               80.0, "Stock inicial de harina panadera");
+    kardex.registrarMovimiento({10, 11, 2026}, "MP-LEV-001", TipoMovimiento::AJUSTE_INVENTARIO,
+                               0.5, "Ajuste por merma de fermentacion");
+    kardex.registrarMovimiento({5, 11, 2026}, "MP-JAM-001", TipoMovimiento::ENTRADA_COMPRA,
+                               25.0, "Ingreso de jamon ahumado");
+    kardex.registrarMovimiento({15, 11, 2026}, "MP-HAR-001", TipoMovimiento::EGRESO_PRODUCCION,
+                               12.5, "Consumo de harina turno matutino");
+    kardex.registrarMovimiento({28, 11, 2026}, "MP-AZU-001", TipoMovimiento::ENTRADA_COMPRA,
+                               40.0, "Reposicion de azucar blanquilla");
+
+    // Conexión directa DFS -> Kardex usando la función adaptadora generarMovimientosEgreso()
+    Designar::DynArray<MovimientoKardex> egresosDFS =
+        generarMovimientosEgreso(insumosTotales, panDeJamon.getSKU(), {12, 11, 2026});
+    kardex.registrarMovimientos(egresosDFS);
+
+    size_t totalEsperado = static_cast<size_t>(6) + static_cast<size_t>(egresosDFS.size());
+    bool totalCorrecto = (kardex.totalMovimientos() == totalEsperado);
+    std::cout << "[+] Total movimientos registrados (6 manuales + " << egresosDFS.size()
+              << " DFS = " << totalEsperado << "): "
+              << (totalCorrecto ? "OK" : "FALLO") << "\n";
+    if (!totalCorrecto)
+    {
+        return 1;
+    }
+
+    bool avlBalanceado = kardex.verificarBalanceoAVL();
+    std::cout << "[+] Invariante de balanceo AVLTree::verify(): "
+              << (avlBalanceado ? "OK" : "FALLO") << "\n";
+    if (!avlBalanceado)
+    {
+        return 1;
+    }
+
+    // Consulta por rango [5/11/2026, 15/11/2026]
+    Designar::DynArray<MovimientoKardex> rangoFechas =
+        kardex.consultarPorRangoFechas({5, 11, 2026}, {15, 11, 2026});
+    size_t esperadoEnRango = static_cast<size_t>(3) + static_cast<size_t>(egresosDFS.size());
+    bool ordenCronologicoOk = true;
+    for (size_t i = 1; i < rangoFechas.size(); ++i)
+    {
+        if (rangoFechas[i].fechaTransaccion < rangoFechas[i - 1].fechaTransaccion)
+        {
+            ordenCronologicoOk = false;
+            break;
+        }
+    }
+    bool rangoOk = (rangoFechas.size() == esperadoEnRango) && ordenCronologicoOk;
+    std::cout << "[+] Consulta in-order acotada [5/11 - 15/11] (" << esperadoEnRango
+              << " movimientos ordenados): "
+              << (rangoOk ? "OK" : "FALLO") << "\n";
+    if (!rangoOk)
+    {
+        return 1;
+    }
+
+    // Consulta filtrada por SKU en rango [1/11/2026, 15/11/2026]
+    Designar::DynArray<MovimientoKardex> harinaEnRango =
+        kardex.consultarPorRangoYSKU({1, 11, 2026}, {15, 11, 2026}, "MP-HAR-001");
+    bool filtroSkuOk = (harinaEnRango.size() == static_cast<size_t>(3));
+    std::cout << "[+] Consulta por rango y SKU MP-HAR-001 [1/11 - 15/11] (3 movs): "
+              << (filtroSkuOk ? "OK" : "FALLO") << "\n";
+    if (!filtroSkuOk)
+    {
+        return 1;
+    }
+
+    // Consulta filtrada por tipo ENTRADA_COMPRA en rango [1/11/2026, 20/11/2026]
+    Designar::DynArray<MovimientoKardex> entradasEnRango =
+        kardex.consultarPorRangoYTipo({1, 11, 2026}, {20, 11, 2026}, TipoMovimiento::ENTRADA_COMPRA);
+    bool filtroTipoOk = (entradasEnRango.size() == static_cast<size_t>(3));
+    std::cout << "[+] Consulta por rango y tipo ENTRADA_COMPRA [1/11 - 20/11] (3 movs): "
+              << (filtroTipoOk ? "OK" : "FALLO") << "\n";
+    if (!filtroTipoOk)
+    {
+        return 1;
+    }
+
+    // Caso borde: rango invertido
+    Designar::DynArray<MovimientoKardex> rangoInvertido =
+        kardex.consultarPorRangoFechas({20, 11, 2026}, {5, 11, 2026});
+    bool rangoInvertidoOk = rangoInvertido.is_empty();
+    std::cout << "[+] Caso borde rango invertido [20/11 - 5/11] vacio: "
+              << (rangoInvertidoOk ? "OK" : "FALLO") << "\n\n";
+    if (!rangoInvertidoOk)
+    {
+        return 1;
+    }
+
+    kardex.mostrarMovimientosPorRango({5, 11, 2026}, {15, 11, 2026});
+    kardex.mostrarHistorialCompleto();
 
     return 0;
 }
